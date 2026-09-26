@@ -20,9 +20,17 @@ The page is designed on a 1440×900 stage and scaled to fit the window. A dedica
 ```
 src/
   pages/index.astro                 page shell, fonts, stage scaling
-  components/landing/Landing.jsx    the wheel, gestures, details window, deck switch
-  components/landing/SoulCard.jsx   card artwork (animated SVG pattern per soul)
-  components/landing/dc.jsx         small base class: renderVals() -> template(v)
+  components/landing/
+    Landing.jsx                     lays out the stage from the parts below
+    useWheel.js                     connects the wheel engine to React
+    config.js                       the tuned feel (springs, geometry), hero typefaces, deck labels
+    landing.css                     static styles; anything that moves is set inline by the engine
+    SoulCard.jsx                    a soul card: its pattern, type and name
+    engine/WheelEngine.js           physics loop, gestures, open/close and deck-switch state
+    engine/frame.js                 turns engine state into each element's styles
+    engine/writer.js                writes those styles to the DOM, pauses hidden card patterns
+    engine/spring.js                spring, easing and ring maths
+    parts/                          TopBar, DeckToggle, Hero, DeckFlip, CardFan, DetailsSheet, BottomBar, patterns
   data/souls.js                     the MBTI and Enneagram decks
 ```
 

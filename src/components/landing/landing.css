@@ -1,0 +1,71 @@
+/* Static styles for the landing stage (a 1440×900 artboard). Anything that moves is set inline by the wheel engine. */
+
+.wheel {
+  position: relative;
+  width: 1440px;
+  height: 900px;
+  /* the artboard is letterboxed; let the fan run to the real window edges (--ext/--exty are set by the page) */
+  clip-path: inset(calc(var(--exty, 0) * -1px) calc(var(--ext, 0) * -1px));
+  background: #F4F0E8;
+}
+
+/* top bar */
+.topbar { position: absolute; left: 0; top: 0; width: 1440px; box-sizing: border-box; padding: 28px 56px; display: flex; justify-content: space-between; align-items: center; z-index: 200; }
+.logo { position: relative; display: flex; align-items: baseline; font-family: 'Instrument Serif', Georgia, serif; font-size: 28px; letter-spacing: -0.03em; text-decoration: none; color: #141210; }
+.logo-it { position: relative; color: #8A8174; }
+.logo-it svg { position: absolute; left: -2px; top: 46%; }
+.navlinks { display: flex; gap: 28px; font-size: 15px; }
+.navlinks a { text-decoration: none; padding: 12px 0; }
+
+/* deck toggle */
+.toggle { position: absolute; top: 32px; height: 36px; padding: 3px; box-sizing: border-box; border-radius: 99px; background: rgba(20,18,16,0.07); display: flex; z-index: 210; }
+.toggle-thumb { position: absolute; top: 3px; height: 30px; border-radius: 99px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(20,18,16,0.14), 0 3px 10px -2px rgba(20,18,16,0.12), 0 0 0 0.5px rgba(20,18,16,0.06); }
+.toggle-opt { all: unset; position: relative; height: 30px; display: flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; font-size: 14px; font-weight: 500; }
+.toggle-count { font-family: 'Geist Mono', monospace; font-size: 11px; font-weight: 400; opacity: 0.6; }
+
+/* hero */
+.hero { position: absolute; left: 0px; top: 156px; width: 1440px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; pointer-events: none; }
+.hero h1 { margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 72px; line-height: 1; letter-spacing: -0.03em; }
+.hero p { margin: 0; font-size: 18px; color: #4A443C; }
+.soulword { position: relative; display: inline-block; height: 0.72em; vertical-align: baseline; }
+.soulface { position: absolute; left: 0; line-height: 1; white-space: nowrap; }
+.soulmark { display: inline-block; width: 0; height: 0; }
+
+/* deck-switch label: a rolodex card flipping between deck names */
+.deckflip { position: absolute; left: 0; top: 470px; width: 1440px; display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 90; }
+.deckflip-hint, .deckflip-sub { font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 16px; letter-spacing: 0.08em; color: #6B6358; }
+.deckflip-stage { position: relative; margin-top: 14px; width: 360px; height: 104px; perspective: 700px; }
+.deckflip-card { position: absolute; left: 0; top: 0; width: 360px; height: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transform-origin: 50% 100%; }
+.deckflip-card.is-front { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.deckflip-name { font-family: 'Instrument Serif', Georgia, serif; font-size: 48px; line-height: 52px; letter-spacing: -0.02em; }
+
+/* the fan */
+.fancard { position: absolute; left: 0; top: 0; width: 232px; height: 324px; border-radius: 20px; will-change: transform; }
+
+/* open card: scrim, pill and details window */
+.scrim { position: absolute; left: calc(var(--ext, 0) * -1px); top: calc(var(--exty, 0) * -1px); width: calc(1440px + var(--ext, 0) * 2px); height: calc(900px + var(--exty, 0) * 2px); z-index: 140; }
+.pill { position: absolute; left: 0; top: 0; z-index: 160; pointer-events: none; }
+.sheet { position: absolute; left: 0; top: 0; z-index: 150; background: rgba(251,248,241,1); overflow: hidden; }
+.sheet-art { position: absolute; width: 232px; height: 324px; transform-origin: 0 0; border-radius: 20px; overflow: hidden; }
+.sheet-text { position: absolute; width: 400px; display: flex; flex-direction: column; }
+.sheet-meta { font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 16px; color: #6B6358; letter-spacing: 0.06em; }
+.sheet-name { margin-top: 8px; font-family: 'Instrument Serif', Georgia, serif; font-size: 44px; line-height: 48px; letter-spacing: -0.02em; }
+.sheet-says { margin-top: 12px; font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 20px; line-height: 28px; color: #3A342C; text-wrap: pretty; }
+.sheet-moments { margin-top: 24px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #E4DCCB; padding-top: 16px; }
+.sheet-moments-title { font-size: 12px; line-height: 16px; color: #6B6358; }
+.sheet-moment { font-size: 15px; line-height: 22px; }
+.sheet-actions { margin-top: 32px; display: flex; gap: 8px; }
+.btn-primary { height: 44px; padding: 0 20px; border-radius: 99px; background: #141210; color: #F4F0E8; text-decoration: none; display: flex; align-items: center; font-size: 15px; font-weight: 500; }
+.btn-primary:hover { color: #F4F0E8; }
+.btn-secondary { height: 44px; padding: 0 18px; border-radius: 99px; border: 1px solid #CFC6B6; background: transparent; font-family: Geist, sans-serif; font-size: 15px; color: #141210; cursor: pointer; }
+.sheet-close { position: absolute; right: 16px; top: 16px; width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(20,18,16,0.06); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+/* fades at the window edges */
+.edgefade { position: absolute; top: calc(var(--exty, 0) * -1px); width: 280px; height: calc(900px + var(--exty, 0) * 2px); z-index: 125; pointer-events: none; }
+.edgefade.is-left { left: calc(var(--ext, 0) * -1px); background: linear-gradient(90deg, rgba(244,240,232,0.92) 0%, rgba(244,240,232,0.8) 14%, rgba(244,240,232,0.58) 32%, rgba(244,240,232,0.34) 52%, rgba(244,240,232,0.13) 74%, rgba(244,240,232,0) 100%); }
+.edgefade.is-right { right: calc(var(--ext, 0) * -1px); background: linear-gradient(270deg, rgba(244,240,232,0.92) 0%, rgba(244,240,232,0.8) 14%, rgba(244,240,232,0.58) 32%, rgba(244,240,232,0.34) 52%, rgba(244,240,232,0.13) 74%, rgba(244,240,232,0) 100%); }
+
+/* bottom bar */
+.bottombar { position: absolute; left: 0; bottom: 34px; width: 1440px; display: flex; justify-content: center; align-items: center; gap: 16px; z-index: 200; }
+.roundbtn { width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid #CFC6B6; background: #F4F0E8; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.counter { font-family: 'Geist Mono', monospace; font-size: 12px; color: #4A443C; min-width: 180px; text-align: center; }

@@ -1,0 +1,16 @@
+const Chevron = ({ d }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#141210" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
+
+// Previous / next buttons around the position counter.
+export function BottomBar({ engine, st, counter }) {
+  return (
+    <div ref={engine.bind('bar')} className="bottombar" style={st.bar}>
+      <button type="button" aria-label="Previous soul" onClick={engine.prev} className="roundbtn"><Chevron d="M15 6l-6 6 6 6" /></button>
+      <span className="counter">{`${counter} · drag, or pull down to switch deck`}</span>
+      <button type="button" aria-label="Next soul" onClick={engine.next} className="roundbtn"><Chevron d="M9 6l6 6-6 6" /></button>
+    </div>
+  );
+}
