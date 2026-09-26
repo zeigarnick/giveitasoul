@@ -1,10 +1,10 @@
 import { FACES } from '../config.js';
 
 // The headline. Its last word, "soul", is ten stacked typefaces; the engine shows the one the pointer points at.
-export function Hero({ engine, st }) {
+export function Hero({ engine, st, L }) {
   return (
-    <div ref={engine.bind('hero')} className="hero" style={st.hero}>
-      <h1>
+    <div ref={engine.bind('hero')} className="hero" style={{ top: `${L.heroTop}px`, padding: `0 ${L.heroPad}px`, ...st.hero }}>
+      <h1 style={{ fontSize: `${L.h1}px`, lineHeight: L.h1Lh }}>
         <span>Give your AI agents a</span>
         {' '}
         <span ref={engine.bind('soul')} className="soulword" style={st.soul}>
@@ -17,7 +17,7 @@ export function Hero({ engine, st }) {
         </span>
         <span>.</span>
       </h1>
-      <p>Spin through personalities. Tap one to meet it.</p>
+      <p style={{ fontSize: `${L.sub}px` }}>Spin through personalities. Tap one to meet it.</p>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { MBTI, ENNEAGRAM } from '../../../data/souls.js';
-import { FEEL, FACES } from '../config.js';
+import { FEEL, FACES, LAYOUTS, PHONE_QUERY } from '../config.js';
 import { springK, stepSpring, cubicBezier, ringOffset } from './spring.js';
 import { frame } from './frame.js';
 import { createWriter } from './writer.js';
@@ -16,10 +16,13 @@ export class WheelEngine {
   constructor() {
     this.mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.rm = this.mq.matches;
+    this.phoneMq = window.matchMedia(PHONE_QUERY);
+    this.layout = this.phoneMq.matches ? 'phone' : 'desk';
+    this.L = LAYOUTS[this.layout];
     this.open = false;
     this.deck = 'mbti';
     this.key = '';
-    this.snapshot = { open: false, deck: 'mbti', key: '' };
+    this.snapshot = { open: false, deck: 'mbti', key: '', layout: this.layout };
     this.listeners = new Set();
     this.p = { pos: this.rm ? 0 : -4, v: 0, target: 0, drag: null, moved: 0, open: 0, ov: 0, rest: 0, rv: 0, sv: 0, last: 0 };
     this.souls = ring('mbti');
@@ -41,7 +44,7 @@ export class WheelEngine {
   subscribe = (fn) => { this.listeners.add(fn); return () => this.listeners.delete(fn); };
   getSnapshot = () => this.snapshot;
   emit() {
-    this.snapshot = { open: this.open, deck: this.deck, key: this.key };
+    this.snapshot = { open: this.open, deck: this.deck, key: this.key, layout: this.layout };
     this.listeners.forEach((fn) => fn());
   }
   // a stable ref callback per element name
@@ -67,7 +70,17 @@ export class WheelEngine {
     this.onRm = () => { this.rm = this.mq.matches; this.writer.resetPause(); this.dirty = true; this.wake(); };
     this.onResize = () => { this.soulRect = null; this.rootRect = null; this.readExt(); this.measureDue = true; this.dirty = true; this.wake(); };
     this.onFonts = () => { this.measureDue = true; this.wake(); };
+    // crossing the phone breakpoint swaps the artboard: forget the open card's pose and the hero word's measurements
+    this.onLayout = () => {
+      this.layout = this.phoneMq.matches ? 'phone' : 'desk';
+      this.L = LAYOUTS[this.layout];
+      this.pose = null; this.faceM = []; this.detH = 0; this.soulRect = null; this.rootRect = null;
+      this.measureDue = true; this.dirty = true;
+      this.emit();
+      this.wake();
+    };
     this.mq.addEventListener('change', this.onRm);
+    this.phoneMq.addEventListener('change', this.onLayout);
     window.addEventListener('resize', this.onResize);
     if (document.fonts) { document.fonts.addEventListener('loadingdone', this.onFonts); document.fonts.ready.then(this.onFonts); }
     this.readExt();
@@ -79,6 +92,7 @@ export class WheelEngine {
     cancelAnimationFrame(this.raf); this.raf = 0;
     clearTimeout(this.wt); clearTimeout(this.sleepT);
     this.mq.removeEventListener('change', this.onRm);
+    this.phoneMq.removeEventListener('change', this.onLayout);
     window.removeEventListener('resize', this.onResize);
     if (document.fonts) document.fonts.removeEventListener('loadingdone', this.onFonts);
   }
@@ -272,7 +286,7 @@ export class WheelEngine {
     if (!near && this.mx != null && this.els.root) {
       if (readRects || !this.rootRect) this.rootRect = this.els.root.getBoundingClientRect();
       const rr = this.rootRect;
-      near = (this.my - rr.top) * 1440 / rr.width > 430;
+      near = (this.my - rr.top) * this.L.W / rr.width > this.L.nearY;
     }
     this.suppress = near;
     if (near) target = 0;
@@ -319,7 +333,7 @@ export class WheelEngine {
   // the fan to switch decks (down). While open, dragging the window down dismisses it.
 
   // artboard pixels per screen pixel
-  scale() { return 1440 / (this.els.root ? this.els.root.getBoundingClientRect().width : 1440); }
+  scale() { return this.L.W / (this.els.root ? this.els.root.getBoundingClientRect().width : this.L.W); }
 
   onPointerDown = (e) => {
     const p = this.p;
@@ -338,7 +352,7 @@ export class WheelEngine {
     this.mx = e.clientX; this.my = e.clientY; this.mxMoved = true; this.lastMove = performance.now();
     this.wake();
     if (this.open && this.els.root && this.pillPos) {
-      const rr = this.els.root.getBoundingClientRect(), sc = 1440 / rr.width;
+      const rr = this.els.root.getBoundingClientRect(), sc = this.L.W / rr.width;
       const hov = Math.abs((e.clientX - rr.left) * sc - this.pillPos.x) < 70 && Math.abs((e.clientY - rr.top) * sc - this.pillPos.y) < 26;
       if (hov !== !!this.pillHover) { this.pillHover = hov; this.dirty = true; }
     } else if (this.pillHover) { this.pillHover = false; }
@@ -406,9 +420,11 @@ export class WheelEngine {
     p.moved = Math.max(p.moved, Math.abs(dx));
     const now = performance.now();
     const dt = Math.max(1, now - p.drag.lt) / 1000;
-    p.drag.vel = p.drag.vel * 0.3 + (-((e.clientX - p.drag.lx) / FEEL.dragPx) / dt) * 0.7;
+    // screen pixels per card: shorter on phones, so a thumb flick covers a few cards
+    const perCard = FEEL.dragPx * this.L.dragK;
+    p.drag.vel = p.drag.vel * 0.3 + (-((e.clientX - p.drag.lx) / perCard) / dt) * 0.7;
     p.drag.lx = e.clientX; p.drag.lt = now;
-    p.pos = p.drag.pos - dx / FEEL.dragPx;
+    p.pos = p.drag.pos - dx / perCard;
   };
 
   // Release: each gesture projects where the finger's speed would carry it and commits or springs back.

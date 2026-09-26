@@ -27,8 +27,7 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
   const p = e.p, cfg = FEEL, N = e.souls.length;
   const pos = p.pos;
   const active = ((Math.round(pos) % N) + N) % N;
-  // K sizes the whole fan (cards, radius, gap, lift) together, so smaller cards keep the same rhythm
-  const K = 0.86, R = cfg.radius * K, PX = 720, PY = 616 + cfg.radius * K, STEP = cfg.spacing;
+  const Lay = e.L, K = Lay.K, R = cfg.radius * K, PX = Lay.W / 2, PY = Lay.PYb + cfg.radius * K, STEP = cfg.spacing;
   const lean = e.rm ? 0 : Math.max(-1, Math.min(1, p.sv / 5)) * cfg.lean;
   const ext = e.ext || 0, exty = e.exty || 0;
   const cardPause = [];
@@ -63,7 +62,7 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
       boxShadow: '0 ' + Math.round(18 + 14 * near) + 'px ' + Math.round(34 + 20 * near) + 'px -18px rgba(20,18,16,' + (cfg.shadow * (0.35 + 0.65 * near)).toFixed(3) + ')'
     };
     // off the window, invisible, or under the full-strength scrim
-    cardPause[i] = e.rm || op < 0.001 || op01 > 0.98 || x < -300 - ext || x > 1460 + ext || y > 920 + exty;
+    cardPause[i] = e.rm || op < 0.001 || op01 > 0.98 || x < -300 - ext || x > Lay.W + 20 + ext || y > Lay.H + 20 + exty;
   }
   return { active, cardPause };
 }
@@ -92,26 +91,29 @@ function heroStyles(e, { op01 }, st) {
   st.bar = { opacity: heroOp };
 }
 
-// The details window morphs out of the centre card: p.open moves it, p.rest sizes it, p.col unfolds the text
-// column. Returns the pill's path attributes.
+// The details window morphs out of the centre card: p.open moves it, p.rest sizes it, p.col unfolds the text.
+// On desktop the card sits left of the text; on phones it sits on top. Returns the pill's path attributes.
 function sheetStyles(e, { open, restE, sheetOn }, st) {
   const p = e.p, cfg = FEEL;
   const m = p.open;
   const P0 = e.pose || { wx: 604, wy: 458, wa: 0, ws: 1 };
   const W0 = CARD_W * P0.ws, H0 = CARD_H * P0.ws, cx0 = P0.wx + CARD_W / 2, cy0 = P0.wy + CARD_H / 2;
-  const PAD = 40, GAP = 40, TEXTW = 400, ART = 1.2;
+  const Lay = e.L, { row, PAD, GAP, ART } = Lay.sheet;
   const cardW = CARD_W * ART, cardH = CARD_H * ART;
   const textH = e.detH || 360;
-  const innerH = Math.max(cardH, textH);
-  const W1 = PAD + cardW + GAP + TEXTW + PAD, H1 = innerH + PAD * 2, cx1 = 720, cy1 = 470;
+  const W1 = row ? PAD + cardW + GAP + Lay.sheet.TEXTW + PAD : Lay.W - 24;
+  const innerH = row ? Math.max(cardH, textH) : cardH + GAP + textH;
+  const H1 = innerH + PAD * 2, cx1 = Lay.W / 2, cy1 = Lay.sheet.cy;
+  // where the card art and the text land inside the open window
+  const artX1 = row ? PAD : (W1 - cardW) / 2, artY1 = row ? PAD + (innerH - cardH) / 2 : PAD;
+  const textX = row ? PAD + cardW + GAP : PAD, textY = row ? PAD + (innerH - textH) / 2 : PAD + cardH + GAP;
   const L = (a, b) => a + (b - a) * m;
   const mS = open ? m : clamp01(p.rest);
   const LS = (a, b) => a + (b - a) * mS;
   const col = p.col == null ? 0 : p.col;
   const LC = (a, b) => a + (b - a) * col;
-  const artY1 = PAD + (innerH - cardH) / 2;
   const WT = LC(cardW, W1), HT = LC(cardH, H1);
-  const artXT = LC(0, PAD), artYT = LC(0, artY1), RT = LC(20 * ART, 28);
+  const artXT = LC(0, artX1), artYT = LC(0, artY1), RT = LC(20 * ART, 28);
   e.slotDy = cy0 - cy1;
   const dyE = (p.wdy || 0) * clamp01(m), gsc = 1 - 0.07 * clamp01((p.wdy || 0) / 320) * clamp01(m);
   const W = LS(W0, WT), H = LS(H0, HT), cx = L(cx0, cx1), cy = L(cy0, cy1) + dyE;
@@ -147,7 +149,7 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
     pointerEvents: pe
   };
   st.art = { left: LS(0, artXT).toFixed(1) + 'px', top: LS(0, artYT).toFixed(1) + 'px', transform: 'scale(' + LS(P0.ws, ART).toFixed(4) + ')', boxShadow: '0 18px 40px -22px rgba(20,18,16,' + (0.35 * clamp01(m)).toFixed(3) + ')' };
-  st.det = { left: Math.round(PAD + cardW + GAP) + 'px', top: Math.round(PAD + (innerH - textH) / 2) + 'px' };
+  st.det = { left: Math.round(textX) + 'px', top: Math.round(textY) + 'px' };
 
   // the details text rises in, one line after another, once the window has unfolded
   const colF = clamp01((p.col - 0.55) / 0.45);
@@ -167,7 +169,7 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
 function deckStyles(e, st) {
   const p = e.p, deck = e.deck, open = e.open;
   const other = deck === 'mbti' ? 'ennea' : 'mbti';
-  const W0 = 112, W1 = 148, t = p.tog || 0;
+  const W0 = e.L.tgW0, W1 = e.L.tgW1, t = p.tog || 0;
   st.toggle = { opacity: (1 - 0.6 * clamp01(p.rest || 0)).toFixed(3), pointerEvents: open ? 'none' : 'auto' };
   st.thumb = { left: (3 + W0 * t).toFixed(1) + 'px', width: (W0 + (W1 - W0) * t).toFixed(1) + 'px' };
   st.opt0 = { color: t < 0.5 ? '#141210' : '#6B6358' };

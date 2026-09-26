@@ -1,8 +1,8 @@
-// The logo and site links. Static.
-export function TopBar() {
+// The logo and site links (links are desktop only).
+export function TopBar({ L }) {
   return (
-    <nav className="topbar">
-      <a href="#" aria-label="giveitasoul home" className="logo">
+    <nav className="topbar" style={{ padding: L.navPad }}>
+      <a href="#" aria-label="giveitasoul home" className="logo" style={{ fontSize: L.logo + 'px' }}>
         {'give'}
         <span className="logo-it">
           {'it'}
@@ -12,10 +12,12 @@ export function TopBar() {
         </span>
         {'asoul'}
       </a>
-      <div className="navlinks">
-        <a href="#">Browse souls</a>
-        <a href="#">Submit yours</a>
-      </div>
+      {L.links ? (
+        <div className="navlinks">
+          <a href="#">Browse souls</a>
+          <a href="#">Submit yours</a>
+        </div>
+      ) : null}
     </nav>
   );
 }

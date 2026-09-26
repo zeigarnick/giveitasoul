@@ -24,7 +24,7 @@ const description = 'Pick a personality for your personal AI agent. Spin through
   </head>
   <body>
     <main class="viewport">
-      <!-- The landing is designed on a 1440×900 stage and scaled to fit the window. -->
+      <!-- The landing is designed on a 1440×900 stage (390×844 on phones) and scaled to fit the window. -->
       <div class="stage" id="stage">
         <Landing client:only="react" />
       </div>
@@ -39,11 +39,13 @@ const description = 'Pick a personality for your personal AI agent. Spin through
       (function () {
         var stage = document.getElementById('stage');
         function fit() {
-          var s = Math.min(window.innerWidth / 1440, window.innerHeight / 900);
+          // the artboard's size comes from CSS: 1440x900, or 390x844 on phones
+          var W = stage.offsetWidth, H = stage.offsetHeight;
+          var s = Math.min(window.innerWidth / W, window.innerHeight / H);
           stage.style.setProperty('--s', String(s));
-          // how far the window extends past the 1440x900 artboard, in artboard pixels
-          stage.style.setProperty('--ext', String(Math.max(0, (window.innerWidth / s - 1440) / 2)));
-          stage.style.setProperty('--exty', String(Math.max(0, (window.innerHeight / s - 900) / 2)));
+          // how far the window extends past the artboard, in artboard pixels
+          stage.style.setProperty('--ext', String(Math.max(0, (window.innerWidth / s - W) / 2)));
+          stage.style.setProperty('--exty', String(Math.max(0, (window.innerHeight / s - H) / 2)));
         }
         fit();
         window.addEventListener('resize', fit);
@@ -80,6 +82,9 @@ const description = 'Pick a personality for your personal AI agent. Spin through
     height: 900px;
     transform: translate(-50%, -50%) scale(var(--s));
     transform-origin: 50% 50%;
+  }
+  @media (max-width: 700px) {
+    .stage { width: 390px; height: 844px; }
   }
   .wheel { touch-action: none; cursor: grab; outline: none; user-select: none; -webkit-user-select: none; }
   .wheel:active { cursor: grabbing; }
