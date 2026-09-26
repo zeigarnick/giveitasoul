@@ -1,5 +1,5 @@
 /* Static styles for the landing stage. Sizes that differ between the desktop and phone artboards are set inline
-   from config.js LAYOUTS (--W, --H and --fade on .wheel); anything that moves is set inline by the wheel engine. */
+   from config.js LAYOUTS (--W and --H on .wheel); anything that moves is set inline by the wheel engine. */
 
 .wheel {
   position: relative;
@@ -62,11 +62,6 @@
 .btn-primary:hover { color: #F4F0E8; }
 .btn-secondary { height: 44px; padding: 0 18px; border-radius: 99px; border: 1px solid #CFC6B6; background: transparent; font-family: Geist, sans-serif; font-size: 15px; color: #141210; cursor: pointer; }
 .sheet-close { position: absolute; right: 16px; top: 16px; width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(20,18,16,0.06); cursor: pointer; display: flex; align-items: center; justify-content: center; }
-
-/* fades at the window edges */
-.edgefade { position: absolute; top: calc(var(--exty, 0) * -1px); width: var(--fade); height: calc(var(--H) + var(--exty, 0) * 2px); z-index: 125; pointer-events: none; }
-.edgefade.is-left { left: calc(var(--ext, 0) * -1px); background: linear-gradient(90deg, rgba(244,240,232,0.92) 0%, rgba(244,240,232,0.8) 14%, rgba(244,240,232,0.58) 32%, rgba(244,240,232,0.34) 52%, rgba(244,240,232,0.13) 74%, rgba(244,240,232,0) 100%); }
-.edgefade.is-right { right: calc(var(--ext, 0) * -1px); background: linear-gradient(270deg, rgba(244,240,232,0.92) 0%, rgba(244,240,232,0.8) 14%, rgba(244,240,232,0.58) 32%, rgba(244,240,232,0.34) 52%, rgba(244,240,232,0.13) 74%, rgba(244,240,232,0) 100%); }
 
 /* bottom bar */
 .bottombar { position: absolute; left: 0; width: var(--W); display: flex; justify-content: center; align-items: center; gap: 16px; z-index: 200; }

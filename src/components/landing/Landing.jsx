@@ -21,7 +21,7 @@ export default function Landing() {
       className="wheel" ref={engine.bind('root')} tabIndex="0"
       onPointerDown={engine.onPointerDown} onPointerMove={engine.onPointerMove} onPointerUp={engine.onPointerUp}
       onPointerLeave={engine.onPointerLeave} onWheel={engine.onWheel} onKeyDown={engine.onKeyDown}
-      style={{ '--W': `${L.W}px`, '--H': `${L.H}px`, '--fade': `${L.fade}px` }}
+      style={{ '--W': `${L.W}px`, '--H': `${L.H}px` }}
     >
       <TopBar L={L} />
       <Hero engine={engine} st={f.st} L={L} />
@@ -29,8 +29,6 @@ export default function Landing() {
       <DeckFlip engine={engine} st={f.st} from={f.from} to={f.to} hint={f.plHint} L={L} />
       <CardFan engine={engine} st={f.st} souls={engine.souls} />
       <DetailsSheet engine={engine} st={f.st} pill={f.pillAttr} soul={engine.souls[f.active]} L={L} />
-      <div className="edgefade is-left" />
-      <div className="edgefade is-right" />
       <BottomBar engine={engine} st={f.st} counter={counter} L={L} />
     </div>
   );
