@@ -11,7 +11,8 @@ export function frame(e) {
     open: e.open,
     restE,
     op01: clamp01(restE),
-    sheetOn: e.open || Math.abs(p.open) > 0.002 || Math.abs(p.ov) > 0.01 || p.rest > 0.002
+    // once a close has handed back to the card, the window stays gone even while the spring settles around zero
+    sheetOn: e.open || (!e.handedBack && (Math.abs(p.open) > 0.002 || Math.abs(p.ov) > 0.01 || p.rest > 0.002))
   };
   const st = {};
   const fan = fanStyles(e, ctx, st);
@@ -192,6 +193,9 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
   const blur = 'blur(' + (cfg.blur * clamp01(restE)).toFixed(2) + 'px) saturate(' + (1 + 0.4 * clamp01(restE)).toFixed(3) + ')';
   st.scrim = { background: 'rgba(244,240,232,' + (cfg.tint * clamp01(restE)).toFixed(3) + ')', backdropFilter: blur, WebkitBackdropFilter: blur, pointerEvents: pe, visibility: vis };
   st.sheet = {
+    // While the text column is folded the window is exactly the card art, so its own background would only show as
+    // a flickering light fringe through the art's anti-aliased edge. It fills in as soon as the window widens.
+    background: 'rgba(251,248,241,' + clamp01(col * 20).toFixed(3) + ')',
     visibility: vis, width: Math.max(1, W).toFixed(1) + 'px', height: Math.max(1, H).toFixed(1) + 'px',
     // carries the card's tilt as it lifts, so a tilted card opens without a jump
     transform: 'translate(' + (e.resting ? Math.round(cx - W / 2) + 'px, ' + Math.round(cy - H / 2) : (cx - W / 2).toFixed(1) + 'px, ' + (cy - H / 2).toFixed(1)) + 'px) rotate(' + L(P0.wa, 0).toFixed(2) + 'deg)' + (p.tx || p.ty ? ' perspective(1400px)' + tilt(p) : '') + ' scale(' + ((1 + sq) * gsc * ls).toFixed(4) + ', ' + ((1 - sq) * gsc * ls).toFixed(4) + ')',

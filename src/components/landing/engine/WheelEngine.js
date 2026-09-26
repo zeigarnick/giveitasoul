@@ -214,6 +214,10 @@ export class WheelEngine {
     if (Math.abs(p.hovv) < 0.002 && Math.abs(p.hov - hovT) < 0.002) { p.hov = hovT; p.hovv = 0; }
     if (!p.gs && Math.abs(p.sinkv) < 0.002 && Math.abs(p.sink - p.sinkT) < 0.0006) { p.sink = p.sinkT; p.sinkv = 0; if (p.sink === 0) this.postSwap = false; }
     if (Math.abs(p.togv) < 0.002 && Math.abs(p.tog - togT) < 0.0006) { p.tog = togT; p.togv = 0; }
+    // Hand the closing window back to the wheel card exactly once. The close spring can swing back across the
+    // threshold; without this latch the page would flip between window and card for a moment (blinking edges).
+    if (open || p.gy) this.handedBack = false;
+    else if (!(Math.abs(p.open) > 0.002 || Math.abs(p.ov) > 0.01 || p.rest > 0.002)) this.handedBack = true;
     for (const [x, v, t] of [['tx', 'txv', aim.x], ['ty', 'tyv', aim.y], ['gl', 'glv', aim.g]]) if (Math.abs(p[v]) < 0.002 && Math.abs(p[x] - t) < 0.0006) { p[x] = t; p[v] = 0; }
     const liveV = p.drag ? p.drag.vel : p.v;
     p.sv += (liveV - p.sv) * Math.min(1, dt * 14);

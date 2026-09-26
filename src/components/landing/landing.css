@@ -48,7 +48,7 @@
 /* open card: scrim, pill and details window */
 .scrim { position: absolute; left: calc(var(--ext, 0) * -1px); top: calc(var(--exty, 0) * -1px); width: calc(var(--W) + var(--ext, 0) * 2px); height: calc(var(--H) + var(--exty, 0) * 2px); z-index: 140; }
 .pill { position: absolute; left: 0; top: 0; z-index: 160; pointer-events: none; }
-.sheet { position: absolute; left: 0; top: 0; z-index: 150; background: rgba(251,248,241,1); overflow: hidden; }
+.sheet { position: absolute; left: 0; top: 0; z-index: 150; overflow: hidden; }
 .sheet-art { position: absolute; width: 232px; height: 324px; transform-origin: 0 0; border-radius: 20px; overflow: hidden; }
 .sheet-text { position: absolute; display: flex; flex-direction: column; }
 .sheet-meta { font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 16px; color: #6B6358; letter-spacing: 0.06em; }
