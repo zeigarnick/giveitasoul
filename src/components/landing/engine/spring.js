@@ -28,3 +28,12 @@ export function ringOffset(i, pos, n) {
   const d = i - pos;
   return ((d % n) + n * 1.5) % n - n / 2;
 }
+
+// Where a spring released from 0 toward 1 is after t seconds (closed form), for time-based animations that should
+// feel like a spring.
+export function springAt(t, response, damping) {
+  const w = 2 * Math.PI / response;
+  if (damping >= 1) return 1 - Math.exp(-w * t) * (1 + w * t);
+  const wd = w * Math.sqrt(1 - damping * damping);
+  return 1 - Math.exp(-damping * w * t) * (Math.cos(wd * t) + (damping * w / wd) * Math.sin(wd * t));
+}

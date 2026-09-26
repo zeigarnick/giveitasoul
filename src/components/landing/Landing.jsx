@@ -6,6 +6,7 @@ import { DeckFlip } from './parts/DeckFlip.jsx';
 import { CardFan } from './parts/CardFan.jsx';
 import { DetailsSheet } from './parts/DetailsSheet.jsx';
 import { BottomBar } from './parts/BottomBar.jsx';
+import { MotionPicker } from './parts/MotionPicker.jsx';
 import './landing.css';
 
 // The landing stage: a 1440×900 artboard, or 390×844 on phones (scaled to the window by the page), holding the
@@ -32,6 +33,7 @@ export default function Landing() {
       <div className="edgefade is-left" />
       <div className="edgefade is-right" />
       <BottomBar engine={engine} st={f.st} counter={counter} L={L} />
+      <MotionPicker engine={engine} current={engine.motionName} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
-import { FEEL, FACES, GLOW, CARD_W, CARD_H } from '../config.js';
-import { clamp01, ringOffset } from './spring.js';
+import { FACES, GLOW, CARD_W, CARD_H } from '../config.js';
+import { clamp01, ringOffset, springAt } from './spring.js';
 
 // Everything that moves, as style objects keyed by element name. The same objects seed React's render, and the
 // engine writes them to the elements on every moving frame. Also records the centre card's pose and the pill's
@@ -24,7 +24,7 @@ export function frame(e) {
 // The fan: each card on a big hidden wheel. When a card opens, the others drop away; when the deck switches,
 // the chain of springs in e.cs drapes them down.
 function fanStyles(e, { open, restE, op01, sheetOn }, st) {
-  const p = e.p, cfg = FEEL, N = e.souls.length;
+  const p = e.p, cfg = e.feel, N = e.souls.length;
   const pos = p.pos;
   const active = ((Math.round(pos) % N) + N) % N;
   const Lay = e.L, K = Lay.K, R = cfg.radius * K, PX = Lay.W / 2, PY = Lay.PYb + cfg.radius * K, STEP = cfg.spacing;
@@ -94,7 +94,7 @@ function heroStyles(e, { op01 }, st) {
 // The details window morphs out of the centre card: p.open moves it, p.rest sizes it, p.col unfolds the text.
 // On desktop the card sits left of the text; on phones it sits on top. Returns the pill's path attributes.
 function sheetStyles(e, { open, restE, sheetOn }, st) {
-  const p = e.p, cfg = FEEL;
+  const p = e.p, cfg = e.feel;
   const m = p.open;
   const P0 = e.pose || { wx: 604, wy: 458, wa: 0, ws: 1 };
   const W0 = CARD_W * P0.ws, H0 = CARD_H * P0.ws, cx0 = P0.wx + CARD_W / 2, cy0 = P0.wy + CARD_H / 2;
@@ -151,17 +151,31 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
   st.art = { left: LS(0, artXT).toFixed(1) + 'px', top: LS(0, artYT).toFixed(1) + 'px', transform: 'scale(' + LS(P0.ws, ART).toFixed(4) + ')', boxShadow: '0 18px 40px -22px rgba(20,18,16,' + (0.35 * clamp01(m)).toFixed(3) + ')' };
   st.det = { left: Math.round(textX) + 'px', top: Math.round(textY) + 'px' };
 
-  // the details text rises in, one line after another, once the window has unfolded
+  textStyles(e, open, st);
+  return pillAttr;
+}
+
+// The details text arrives one line after another once the window has unfolded, and leaves as it folds.
+// "rise": lines ease up 10px out of a blur. "spring": lines blend in from a little smaller, out of a blur, on a
+// spring, and shrink back into the window on close (the Dynamic Island morph).
+function textStyles(e, open, st) {
+  const p = e.p, T = e.motion.text, X = e.motion.exit;
   const colF = clamp01((p.col - 0.55) / 0.45);
   for (let i = 0; i < 5; i++) {
     const tn = performance.now();
     let k;
-    if (open) { const q = e.openB ? clamp01((tn - e.openBAt - 120 - i * 50) / 420) : 0; k = 1 - Math.pow(1 - q, 3); }
-    else k = Math.min(1 - clamp01((tn - (e.closeAt || 0)) / 110), colF);
-    st['d' + i] = { opacity: k.toFixed(3), transform: 'translateY(' + ((1 - k) * 10).toFixed(1) + 'px)', filter: 'blur(' + ((1 - k) * 4).toFixed(2) + 'px)' };
-    if (i === 0) st.closeBtn = { opacity: k.toFixed(3) };
+    if (open) {
+      const t = e.openB ? tn - e.openBAt - T.delay - i * T.stagger : -1;
+      k = T.kind === 'rise' ? 1 - Math.pow(1 - clamp01(t / T.dur), 3) : (t > 0 ? springAt(t / 1000, T.response, T.damping) : 0);
+    } else k = Math.min(1 - clamp01((tn - (e.closeAt || 0)) / X.dur), colF);
+    if (T.kind === 'rise') {
+      st['d' + i] = { opacity: k.toFixed(3), transform: 'translateY(' + ((1 - k) * T.rise).toFixed(1) + 'px)', filter: 'blur(' + ((1 - k) * T.blur).toFixed(2) + 'px)', transformOrigin: '50% 50%' };
+    } else {
+      const s0 = open ? T.scale : X.scale, b0 = open ? T.blur : X.blur;
+      st['d' + i] = { opacity: clamp01(k).toFixed(3), transform: 'scale(' + (s0 + (1 - s0) * k).toFixed(4) + ')', filter: 'blur(' + (Math.max(0, 1 - k) * b0).toFixed(2) + 'px)', transformOrigin: '0% 50%' };
+    }
+    if (i === 0) st.closeBtn = { opacity: clamp01(k).toFixed(3) };
   }
-  return pillAttr;
 }
 
 // The MBTI/Enneagram toggle and the rolodex flip between deck names, driven by the centre card's own spring:

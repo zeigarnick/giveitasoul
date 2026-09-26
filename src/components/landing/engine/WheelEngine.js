@@ -1,5 +1,5 @@
 import { MBTI, ENNEAGRAM } from '../../../data/souls.js';
-import { FEEL, FACES, LAYOUTS, PHONE_QUERY } from '../config.js';
+import { FEEL, FACES, LAYOUTS, PHONE_QUERY, MOTIONS } from '../config.js';
 import { springK, stepSpring, cubicBezier, ringOffset } from './spring.js';
 import { frame } from './frame.js';
 import { createWriter } from './writer.js';
@@ -19,10 +19,13 @@ export class WheelEngine {
     this.phoneMq = window.matchMedia(PHONE_QUERY);
     this.layout = this.phoneMq.matches ? 'phone' : 'desk';
     this.L = LAYOUTS[this.layout];
+    let motion = 'tuned';
+    try { const m = localStorage.getItem('giveitasoul.motion'); if (MOTIONS[m]) motion = m; } catch (err) {}
+    this.useMotion(motion);
     this.open = false;
     this.deck = 'mbti';
     this.key = '';
-    this.snapshot = { open: false, deck: 'mbti', key: '', layout: this.layout };
+    this.snapshot = { open: false, deck: 'mbti', key: '', layout: this.layout, motion: this.motionName };
     this.listeners = new Set();
     this.p = { pos: this.rm ? 0 : -4, v: 0, target: 0, drag: null, moved: 0, open: 0, ov: 0, rest: 0, rv: 0, sv: 0, last: 0 };
     this.souls = ring('mbti');
@@ -44,7 +47,7 @@ export class WheelEngine {
   subscribe = (fn) => { this.listeners.add(fn); return () => this.listeners.delete(fn); };
   getSnapshot = () => this.snapshot;
   emit() {
-    this.snapshot = { open: this.open, deck: this.deck, key: this.key, layout: this.layout };
+    this.snapshot = { open: this.open, deck: this.deck, key: this.key, layout: this.layout, motion: this.motionName };
     this.listeners.forEach((fn) => fn());
   }
   // a stable ref callback per element name
@@ -90,7 +93,7 @@ export class WheelEngine {
   }
   unmount() {
     cancelAnimationFrame(this.raf); this.raf = 0;
-    clearTimeout(this.wt); clearTimeout(this.sleepT);
+    clearTimeout(this.wt); clearTimeout(this.replayT); clearTimeout(this.sleepT);
     this.mq.removeEventListener('change', this.onRm);
     this.phoneMq.removeEventListener('change', this.onLayout);
     window.removeEventListener('resize', this.onResize);
@@ -126,7 +129,7 @@ export class WheelEngine {
 
   // Advances every spring by the time since the last frame; paints if anything moved. Returns whether to keep looping.
   tick(now) {
-    const p = this.p, cfg = FEEL, rm = this.rm, open = this.open;
+    const p = this.p, cfg = this.feel, rm = this.rm, open = this.open;
     if (!p.last) p.last = now;
     const dt = Math.max(0, Math.min(0.05, (now - p.last) / 1000));
     p.last = now;
@@ -238,7 +241,7 @@ export class WheelEngine {
 
   // Side cards dim with distance, brightening quickly as they arrive and dimming slowly as they leave.
   stepFade(dt) {
-    const N = this.souls.length, cfg = FEEL;
+    const N = this.souls.length, cfg = this.feel;
     if (!this.fv) this.fv = new Array(N).fill(1);
     let fading = false;
     for (let i = 0; i < N; i++) {
@@ -304,6 +307,22 @@ export class WheelEngine {
 
   // ---- Actions ------------------------------------------------------------------------------------------------
 
+  // open/close motion variant (see MOTIONS); the feel is FEEL with the variant's spring overrides
+  useMotion(name) {
+    this.motionName = name;
+    this.motion = MOTIONS[name];
+    this.feel = { ...FEEL, ...this.motion.feel };
+  }
+  // switch variant from the motion picker and replay the open so it can be compared
+  setMotion = (name) => {
+    if (!MOTIONS[name] || name === this.motionName) return;
+    this.useMotion(name);
+    try { localStorage.setItem('giveitasoul.motion', name); } catch (err) {}
+    this.emit();
+    clearTimeout(this.replayT);
+    if (this.open) { this.setOpen(false); this.replayT = setTimeout(() => this.setOpen(true), 700); }
+    else if (!this.swapPending && !this.p.drag) this.setOpen(true);
+  };
   setOpen(v) {
     if (this.open === v) return;
     this.open = v;
@@ -421,7 +440,7 @@ export class WheelEngine {
     const now = performance.now();
     const dt = Math.max(1, now - p.drag.lt) / 1000;
     // screen pixels per card: shorter on phones, so a thumb flick covers a few cards
-    const perCard = FEEL.dragPx * this.L.dragK;
+    const perCard = this.feel.dragPx * this.L.dragK;
     p.drag.vel = p.drag.vel * 0.3 + (-((e.clientX - p.drag.lx) / perCard) / dt) * 0.7;
     p.drag.lx = e.clientX; p.drag.lt = now;
     p.pos = p.drag.pos - dx / perCard;
@@ -470,7 +489,7 @@ export class WheelEngine {
     p.drag = null;
     p.v = vel;
     // iOS-style momentum: land on the card the flick would coast to
-    const d = FEEL.decel;
+    const d = this.feel.decel;
     p.target = Math.round(p.pos + (vel / 1000) * d / (1 - d));
   };
 
@@ -483,11 +502,11 @@ export class WheelEngine {
     if (this.open || e.ctrlKey) return;
     // Firefox can report whole lines or pages instead of pixels
     const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 900 : 1;
-    p.target += (e.deltaY + e.deltaX) * unit / FEEL.wheelPx;
+    p.target += (e.deltaY + e.deltaX) * unit / this.feel.wheelPx;
     this.dirty = true;
     this.wake();
     clearTimeout(this.wt);
-    this.wt = setTimeout(() => { p.target = Math.round(p.target); this.dirty = true; this.wake(); }, FEEL.snapMs);
+    this.wt = setTimeout(() => { p.target = Math.round(p.target); this.dirty = true; this.wake(); }, this.feel.snapMs);
   };
 
   onKeyDown = (e) => {
