@@ -15,7 +15,8 @@ async function copyText(text) {
 // with the card on one side and what the soul says and does on the other.
 export function DetailsSheet({ engine, st, pill, soul, L }) {
   const { row, PAD, TEXTW } = L.sheet;
-  const textW = row ? TEXTW : L.W - 24 - 2 * PAD;
+  // phones: the window spans the whole screen (the artboard plus --ext each side), MARGIN in from each edge
+  const textW = row ? `${TEXTW}px` : `calc(${L.W - 2 * (L.sheet.MARGIN + PAD)}px + 2px * var(--ext, 0))`;
   // 'about' shows what the soul is like; 'file' shows its SOUL.md with copy / download / link
   const [view, setView] = useState('about');
   const [done, setDone] = useState('');
@@ -50,7 +51,7 @@ export function DetailsSheet({ engine, st, pill, soul, L }) {
           <SoulCard s={soul} />
           <span className="glare"><span ref={engine.bind('artGlare')} className="glare-spot" style={st.artGlare} /></span>
         </div>
-        <div ref={engine.bind('det')} className="sheet-text" style={{ width: `${textW}px`, ...st.det }}>
+        <div ref={engine.bind('det')} className="sheet-text" style={{ width: textW, ...st.det }}>
           {file ? (
             <span ref={engine.bind('d0')} className="sheet-meta soulfile-head" style={st.d0}>
               <span>SOUL.md</span>

@@ -147,7 +147,7 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
   const Lay = e.L, { row, PAD, GAP, ART } = Lay.sheet;
   const cardW = CARD_W * ART, cardH = CARD_H * ART;
   const textH = e.detH || 360;
-  const W1 = row ? PAD + cardW + GAP + Lay.sheet.TEXTW + PAD : Lay.W - 24;
+  const W1 = row ? PAD + cardW + GAP + Lay.sheet.TEXTW + PAD : Lay.W + 2 * ((e.ext || 0) - Lay.sheet.MARGIN);
   const innerH = row ? Math.max(cardH, textH) : cardH + GAP + textH;
   const H1 = innerH + PAD * 2, cx1 = Lay.W / 2, cy1 = Lay.sheet.cy;
   // where the card art and the text land inside the open window
