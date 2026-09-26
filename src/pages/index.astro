@@ -86,7 +86,8 @@ const description = 'Pick a personality for your personal AI agent. Spin through
   @media (max-width: 700px) {
     .stage { width: 390px; height: 844px; }
   }
-  .wheel { touch-action: none; cursor: grab; outline: none; user-select: none; -webkit-user-select: none; }
+  /* no tap highlight box or long-press callout on phones: cards and buttons have their own pressed motion */
+  .wheel { touch-action: none; cursor: grab; outline: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
   .wheel:active { cursor: grabbing; }
   .slotbtn { all: unset; display: block; cursor: pointer; border-radius: 20px; }
   .slotbtn:focus-visible { outline: 2px solid #141210; outline-offset: 4px; }
