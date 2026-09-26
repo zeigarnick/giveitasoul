@@ -5,6 +5,11 @@ const ART = { position: 'absolute', left: '0', top: '0' };
 const Svg = ({ children, ...rest }) => (
   <svg width="232" height="324" viewBox="0 0 232 324" style={ART} {...rest}>{children}</svg>
 );
+// There-and-back loops ease through each turnaround like a sine wave instead of bouncing off it (Interface Craft,
+// Wave Functions: keyframes show a seam where they reverse; a wave is smooth everywhere).
+const EASE = '0.37 0 0.63 1';
+const WAVE = { calcMode: 'spline', keyTimes: '0;0.5;1', keySplines: EASE + ';' + EASE };
+const GRID_WAVE = { calcMode: 'spline', keySplines: EASE + ';' + EASE + ';' + EASE };
 // SMIL begin offsets: "0s", "-0.3s", …
 const offset = (sec, digits = 1) => (sec === 0 ? '0s' : (sec < 0 ? '-' : '') + Math.abs(sec).toFixed(digits) + 's');
 
@@ -31,8 +36,8 @@ function Bars({ ac }) {
     <Svg fill={ac}>
       {BARS.map(([x, y, y2, dur, begin]) => (
         <rect key={x} x={x} width="10" rx="5" y={y} height={210 - y}>
-          <animate attributeName="y" values={`${y};${y2};${y}`} dur={dur} begin={begin} repeatCount="indefinite" />
-          <animate attributeName="height" values={`${210 - y};${210 - y2};${210 - y}`} dur={dur} begin={begin} repeatCount="indefinite" />
+          <animate attributeName="y" values={`${y};${y2};${y}`} {...WAVE} dur={dur} begin={begin} repeatCount="indefinite" />
+          <animate attributeName="height" values={`${210 - y};${210 - y2};${210 - y}`} {...WAVE} dur={dur} begin={begin} repeatCount="indefinite" />
         </rect>
       ))}
     </Svg>
@@ -77,7 +82,7 @@ function Still({ ac }) {
         {Array.from({ length: 16 }, (_, i) => <line key={i} x1={12 + 14 * i} y1="0" x2={12 + 14 * i} y2="206" />)}
       </g>
       <circle cx="116" cy="104" r="46" fill={ac}>
-        <animate attributeName="r" values="46;47.4;46" dur="9s" repeatCount="indefinite" />
+        <animate attributeName="r" values="46;47.4;46" {...WAVE} dur="9s" repeatCount="indefinite" />
       </circle>
     </Svg>
   );
@@ -91,7 +96,7 @@ function Petals({ ac }) {
         {[0, 30, 60, 90, 120, 150].map((a) => <ellipse key={a} cx="116" cy="110" rx="22" ry="80" transform={a ? `rotate(${a} 116 110)` : undefined} />)}
       </g>
       <circle cx="116" cy="110" r="10" fill={ac}>
-        <animate attributeName="r" values="8;13;8" dur="4s" repeatCount="indefinite" />
+        <animate attributeName="r" values="8;13;8" {...WAVE} dur="4s" repeatCount="indefinite" />
       </circle>
     </Svg>
   );
@@ -120,7 +125,7 @@ function Dots({ ac }) {
     <Svg fill={ac}>
       {dots.map((d) => (
         <circle key={d.cx + '-' + d.cy} cx={d.cx} cy={d.cy} r="3">
-          <animate attributeName="r" values="2;8;2" dur="3.2s" begin={d.begin} repeatCount="indefinite" />
+          <animate attributeName="r" values="2;8;2" {...WAVE} dur="3.2s" begin={d.begin} repeatCount="indefinite" />
         </circle>
       ))}
     </Svg>
@@ -157,7 +162,7 @@ function Nest({ ac }) {
     <Svg fill="none" stroke={ac} strokeWidth="1.6">
       {[0, 1, 2, 3].map((i) => (
         <rect key={i} x={26 + 18 * i} y={22 + 18 * i} width={180 - 36 * i} height={180 - 36 * i} rx={40 - 8 * i}>
-          <animate attributeName="stroke-opacity" values="0.25;1;0.25" dur="3s" begin={offset(0.3 * i)} repeatCount="indefinite" />
+          <animate attributeName="stroke-opacity" values="0.25;1;0.25" {...WAVE} dur="3s" begin={offset(0.3 * i)} repeatCount="indefinite" />
         </rect>
       ))}
       <rect x="98" y="94" width="36" height="36" rx="10" fill={ac} />
@@ -174,7 +179,7 @@ function Stars({ ac, bg }) {
       <circle cx="166" cy="68" r="30" fill={bg} />
       {STARS.map(([cx, cy, r, values, dur]) => (
         <circle key={cx + '-' + cy} cx={cx} cy={cy} r={r}>
-          <animate attributeName="opacity" values={values} dur={dur} repeatCount="indefinite" />
+          <animate attributeName="opacity" values={values} {...WAVE} dur={dur} repeatCount="indefinite" />
         </circle>
       ))}
     </Svg>
@@ -205,7 +210,7 @@ function Grid({ ac }) {
     <Svg fill="none">
       {Array.from({ length: 16 }, (_, i) => (
         <rect key={i} x={40 + 40 * (i % 4)} y={28 + 40 * Math.floor(i / 4)} width="28" height="28" rx="7" fill={ac} fillOpacity="0.15">
-          <animate attributeName="fill-opacity" values="0.15;1;1;0.15" keyTimes="0;0.15;0.7;1" dur="6s" begin={'-' + (i * 35 / 100).toFixed(2) + 's'} repeatCount="indefinite" />
+          <animate attributeName="fill-opacity" values="0.15;1;1;0.15" keyTimes="0;0.15;0.7;1" {...GRID_WAVE} dur="6s" begin={'-' + (i * 35 / 100).toFixed(2) + 's'} repeatCount="indefinite" />
         </rect>
       ))}
     </Svg>
@@ -235,11 +240,11 @@ function Burst({ ac }) {
         {RAYS.map(([x1, y1, x2, y2]) => <line key={x2 + y2} x1={x1} y1={y1} x2={x2} y2={y2} />)}
       </g>
       <circle cx="116" cy="110" r="16" fill={ac}>
-        <animate attributeName="r" values="13;19;13" dur="1.5s" repeatCount="indefinite" />
+        <animate attributeName="r" values="13;19;13" {...WAVE} dur="1.5s" repeatCount="indefinite" />
       </circle>
       {SPARKS.map(([cx, cy, r, dur, begin]) => (
         <circle key={cx} cx={cx} cy={cy} r={r} fill={ac}>
-          <animate attributeName="opacity" values="0;1;0" dur={dur} begin={begin} repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0;1;0" {...WAVE} dur={dur} begin={begin} repeatCount="indefinite" />
         </circle>
       ))}
     </Svg>
@@ -270,8 +275,8 @@ function Ennea({ ac, num }) {
         <animate attributeName="stroke-dashoffset" values="100;0;0;-100" keyTimes="0;0.45;0.75;1" dur="5s" repeatCount="indefinite" />
       </path>
       <circle cx={en.x} cy={en.y} r="12" stroke={ac} strokeWidth="1.5" fill="none">
-        <animate attributeName="r" values="7;16;7" dur="2.5s" repeatCount="indefinite" />
-        <animate attributeName="stroke-opacity" values="0.9;0;0.9" dur="2.5s" repeatCount="indefinite" />
+        <animate attributeName="r" values="7;16;7" {...WAVE} dur="2.5s" repeatCount="indefinite" />
+        <animate attributeName="stroke-opacity" values="0.9;0;0.9" {...WAVE} dur="2.5s" repeatCount="indefinite" />
       </circle>
       <circle cx={en.x} cy={en.y} r="6" fill={ac} />
     </Svg>
