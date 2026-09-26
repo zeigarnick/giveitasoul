@@ -157,7 +157,7 @@ export default class Landing extends DCLogic {
       if (!near && this.mx != null && this.rootEl) {
         const rr = this.rootEl.getBoundingClientRect();
         const yA = (this.my - rr.top) * 1440 / rr.width;
-        near = yA > 385;
+        near = yA > 430;
       }
       this.suppress = near;
       if (near) target = 0;
@@ -213,7 +213,8 @@ export default class Landing extends DCLogic {
     const { open, cfg, hud, sound, copied, preset } = this.state;
     const pos = p.pos;
     const active = ((Math.round(pos) % N) + N) % N;
-    const R = cfg.radius, PX = 720, PY = 620 + cfg.radius, STEP = cfg.spacing;
+    // K sizes the whole fan (cards, radius, gap, lift) together, so smaller cards keep the same rhythm
+    const K = 0.86, R = cfg.radius * K, PX = 720, PY = 616 + cfg.radius * K, STEP = cfg.spacing;
     const restE = p.rest * (1 - 0.45 * Math.max(0, Math.min(1, (p.dy || 0) / 320)) * Math.max(0, Math.min(1, p.open)));
     const op01 = Math.max(0, Math.min(1, restE));
     const sheetOn = open || Math.abs(p.open) > 0.002 || Math.abs(p.ov) > 0.01 || p.rest > 0.002;
@@ -224,18 +225,18 @@ export default class Landing extends DCLogic {
       const ad = Math.abs(d);
       const e = Math.max(0, 1 - ad);
       const isActive = i === active;
-      const angDeg = d * STEP + Math.sign(d) * Math.min(1, ad) * (cfg.gap / R) * 180 / Math.PI;
+      const angDeg = d * STEP + Math.sign(d) * Math.min(1, ad) * (cfg.gap * K / R) * 180 / Math.PI;
       const ang = angDeg * Math.PI / 180;
       const wx = PX + R * Math.sin(ang) - 116;
-      const wy = PY - R * Math.cos(ang) - 162 - cfg.lift * e - (isActive ? (p.lift || 0) : 0);
+      const wy = PY - R * Math.cos(ang) - 162 - cfg.lift * K * e - (isActive ? (p.lift || 0) : 0);
       const wa = angDeg + lean;
       const dz = Math.min(1, ad / cfg.depthRange), ds = dz * dz * (3 - 2 * dz);
-      const ws = (1 + (cfg.scale - 1) * e) * (1 - (1 - cfg.sideScale) * ds);
+      const ws = K * (1 + (cfg.scale - 1) * e) * (1 - (1 - cfg.sideScale) * ds);
       const wry = Math.sign(d) * Math.min(1, ad) * cfg.turn;
       const f = this.fv ? this.fv[i] : this.bez(Math.min(1, ad / cfg.fadeRange));
       const wop = ad < N / 2 - 0.45 ? 1 : 0;
       let ox, oy, oa, os, oop;
-      if (isActive) { this.pose = { wx, wy, wa, ws }; ox = wx; oy = wy; oa = wa; os = ws; oop = 0; } else { ox = wx; oy = wy + cfg.drop; oa = wa; os = 0.92; oop = 0; }
+      if (isActive) { this.pose = { wx, wy, wa, ws }; ox = wx; oy = wy; oa = wa; os = ws; oop = 0; } else { ox = wx; oy = wy + cfg.drop; oa = wa; os = 0.92 * K; oop = 0; }
       const m = restE;
       const L = (a, b) => a + (b - a) * m;
       const cst = this.cs && this.cs[i] ? this.cs[i] : { s: 0, v: 0 };
@@ -696,7 +697,7 @@ export default class Landing extends DCLogic {
           </a>
         </div>
       </nav>
-      <div style={{ "position": "absolute", "left": "0px", "top": "212px", "width": "1440px", "display": "flex", "flexDirection": "column", "alignItems": "center", "gap": "14px", "textAlign": "center", "opacity": v.heroOp, "transform": `translateY(${v.heroY}px)`, "pointerEvents": "none" }}>
+      <div style={{ "position": "absolute", "left": "0px", "top": "156px", "width": "1440px", "display": "flex", "flexDirection": "column", "alignItems": "center", "gap": "14px", "textAlign": "center", "opacity": v.heroOp, "transform": `translateY(${v.heroY}px)`, "pointerEvents": "none" }}>
         <h1 style={{ "margin": "0", "fontFamily": "'Instrument Serif', Georgia, serif", "fontWeight": "400", "fontSize": "72px", "lineHeight": "1", "letterSpacing": "-0.03em" }}>
           <span>
             {"Give your AI agents a"}
