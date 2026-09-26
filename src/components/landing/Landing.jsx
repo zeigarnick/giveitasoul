@@ -3,39 +3,100 @@ import { DCLogic } from './dc.jsx';
 import SoulCard from './SoulCard.jsx';
 import { MBTI, ENNEAGRAM } from '../../data/souls.js';
 
+// The tuned feel. Springs are SwiftUI-style (response in seconds, damping ratio); fx/fy is the side-card fade curve.
+const CFG = { response: 0.63, damping: 0.86, decel: 0.998, dragPx: 245, wheelPx: 120, snapMs: 60, radius: 1160, spacing: 6.7, lean: 2.5, lift: 32, scale: 1.105, dim: 0.5, shadow: 0.3, fadeIn: 0.05, fadeOut: 0.28, sideScale: 0.82, depthRange: 5, turn: -21.5, gap: 84, fadeRange: 6, fx1: 0.336, fy1: 0.101, fx2: 0.251, fy2: 1.015, mResp: 0.53, mDamp: 0.74, mClose: 0.42, mCloseDamp: 0.8, squash: 0, blur: 14, tint: 0.63, drop: 80 };
+
+// The hero word "soul" swaps typeface toward the pointer; index 0 is the resting face.
+const FACES = [
+  { ff: "'Instrument Serif', Georgia, serif", st: 'italic', w: 400, fs: 1, ls: -0.03 },
+  { ff: "'Bodoni Moda', Didot, serif", st: 'italic', w: 700, fs: 0.92, ls: -0.03 },
+  { ff: "'Bricolage Grotesque', sans-serif", st: 'normal', w: 800, fs: 0.86, ls: -0.05 },
+  { ff: "Caveat, cursive", st: 'normal', w: 700, fs: 1.12, ls: -0.01 },
+  { ff: "'Young Serif', Georgia, serif", st: 'normal', w: 400, fs: 0.86, ls: -0.03 },
+  { ff: "'Space Mono', monospace", st: 'normal', w: 700, fs: 0.8, ls: -0.06 },
+  { ff: "'DM Serif Display', Georgia, serif", st: 'normal', w: 400, fs: 0.9, ls: -0.03 },
+  { ff: "Quicksand, sans-serif", st: 'normal', w: 600, fs: 0.9, ls: -0.04 },
+  { ff: "Unbounded, sans-serif", st: 'normal', w: 700, fs: 0.72, ls: -0.05 },
+  { ff: "Anton, Impact, sans-serif", st: 'normal', w: 400, fs: 0.96, ls: 0 }
+];
+const GLOW = [[198,43,39],[224,80,26],[156,111,0],[95,122,14],[46,125,79],[28,128,116],[30,95,208],[106,82,217],[201,37,96]];
+
+const kebab = (k) => k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase());
+
 // The landing stage: a 1440×900 artboard (scaled to the viewport by the page).
-// Physics runs in a rAF loop (tick) with springs integrated at 240 Hz; renderVals() turns state into view values.
+// Physics runs in a rAF loop (tick) with springs integrated at 240 Hz. Each moving frame, frame() turns state into
+// styles and apply() writes them straight to the elements; React only re-renders when the deck, the open state or
+// the centre soul changes. The loop sleeps when nothing moves and wakes on input.
 export default class Landing extends DCLogic {
   constructor(p) {
     super(p);
-    this.PRESETS = {
-      Ensoul: { response: 0.63, damping: 0.86, decel: 0.998, dragPx: 245, wheelPx: 120, snapMs: 60, radius: 1160, spacing: 6.7, visible: 5, lean: 2.5, lift: 32, scale: 1.105, dim: 0.5, shadow: 0.3, fadeIn: 0.05, fadeOut: 0.28, sideScale: 0.82, depthRange: 5, turn: -21.5, gap: 84, fadeTo: 1, fadeRange: 6, fx1: 0.336, fy1: 0.101, fx2: 0.251, fy2: 1.015, mResp: 0.53, mDamp: 0.74, mClose: 0.42, mCloseDamp: 0.8, dBlur: 0, squash: 0, winW: 860, winH: 560, artScale: 1.45, dStart: 0.35, dStagger: 0.15, dDur: 0.51, dRise: 6, blur: 14, tint: 0.63, drop: 80 },
-      iOS: { response: 0.55, damping: 0.83, decel: 0.998 },
-      Snappy: { response: 0.3, damping: 0.9, decel: 0.992 },
-      Gentle: { response: 0.85, damping: 1, decel: 0.998 },
-      Bouncy: { response: 0.5, damping: 0.52, decel: 0.998 }
-    };
-    this.state = {
-      t: 0, deck: 'mbti', open: false, hud: false, sound: false, copied: 0, preset: 'Ensoul',
-      cfg: { response: 0.63, damping: 0.86, decel: 0.998, dragPx: 245, wheelPx: 120, snapMs: 60, radius: 1160, spacing: 6.7, visible: 5, lean: 2.5, lift: 32, scale: 1.105, dim: 0.5, shadow: 0.3, fadeIn: 0.05, fadeOut: 0.28, sideScale: 0.82, depthRange: 5, turn: -21.5, gap: 84, fadeTo: 1, fadeRange: 6, fx1: 0.336, fy1: 0.101, fx2: 0.251, fy2: 1.015, mResp: 0.53, mDamp: 0.74, mClose: 0.42, mCloseDamp: 0.8, dBlur: 0, squash: 0, winW: 860, winH: 560, artScale: 1.45, dStart: 0.35, dStagger: 0.15, dDur: 0.51, dRise: 6, blur: 14, tint: 0.63, drop: 80 }
-    };
-    this.p = { pos: -4, v: 0, target: 0, drag: null, moved: 0, open: 0, ov: 0, rest: 0, rv: 0, sv: 0, lastR: 0, last: 0 };
+    this.mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    this.rm = this.mq.matches;
+    this.state = { deck: 'mbti', open: false, key: '' };
+    this.p = { pos: this.rm ? 0 : -4, v: 0, target: 0, drag: null, moved: 0, open: 0, ov: 0, rest: 0, rv: 0, sv: 0, last: 0 };
     this.SOULS = MBTI;
     this.DECKS = { mbti: MBTI, ennea: ENNEAGRAM };
+    this.els = {};
+    this.refs = {};
+    this.paused = [];
+    this.loop = (now) => {
+      this.raf = 0;
+      if (this.tick(now)) this.raf = requestAnimationFrame(this.loop);
+      else this.sleep(now);
+    };
   }
   componentDidMount() {
-    const loop = (now) => { this.tick(now); this.raf = requestAnimationFrame(loop); };
-    this.raf = requestAnimationFrame(loop);
+    this.onRm = () => { this.rm = this.mq.matches; this.paused = []; this.artPaused = null; this.dirty = true; this.wake(); };
+    // how far the window reaches past the artboard (set by the page), so cards out there still count as on screen
+    this.readExt = () => { const cs = this.els.root ? getComputedStyle(this.els.root) : null; this.ext = cs ? +cs.getPropertyValue('--ext') || 0 : 0; this.exty = cs ? +cs.getPropertyValue('--exty') || 0 : 0; };
+    this.onResize = () => { this.soulRect = null; this.rootRect = null; this.readExt(); this.measureDue = true; this.dirty = true; this.wake(); };
+    this.onFonts = () => { this.measureDue = true; this.wake(); };
+    this.mq.addEventListener('change', this.onRm);
+    window.addEventListener('resize', this.onResize);
+    if (document.fonts) { document.fonts.addEventListener('loadingdone', this.onFonts); document.fonts.ready.then(this.onFonts); }
+    this.readExt();
+    this.measureDue = true; this.dirty = true;
+    this.wake();
   }
-  componentWillUnmount() { cancelAnimationFrame(this.raf); clearTimeout(this.wt); clearTimeout(this.ct); }
+  componentDidUpdate() {
+    // React just wrote its own copy of the styles and may have swapped card artwork: forget what we wrote, write it again
+    this.w = null; this.paused = []; this.artPaused = null;
+    this.apply(this.frame());
+    this.measureDue = true;
+    this.wake();
+  }
+  componentWillUnmount() {
+    cancelAnimationFrame(this.raf); clearTimeout(this.wt); clearTimeout(this.sleepT);
+    this.mq.removeEventListener('change', this.onRm);
+    window.removeEventListener('resize', this.onResize);
+    if (document.fonts) document.fonts.removeEventListener('loadingdone', this.onFonts);
+  }
+  wake() {
+    if (this.raf) return;
+    clearTimeout(this.sleepT);
+    this.raf = requestAnimationFrame(this.loop);
+  }
+  sleep(now) {
+    this.p.last = 0;
+    // come back for the idle nudge
+    if (!this.learned && !this.rm) {
+      const at = Math.max((this.lastInput || 0) + 2400, (this.nudgeAt || 0) + 3600);
+      this.sleepT = setTimeout(() => this.wake(), Math.max(16, at - now + 20));
+    }
+  }
+  // a stable ref callback per element name
+  R(name) {
+    return this.refs[name] || (this.refs[name] = (el) => { this.els[name] = el; });
+  }
   springK(resp, damp) { const k = Math.pow(2 * Math.PI / resp, 2); return { k, c: 4 * Math.PI * damp / resp }; }
   tick(now) {
-    const p = this.p, cfg = this.state.cfg;
+    const p = this.p, cfg = CFG, rm = this.rm;
     if (!p.last) p.last = now;
-    const dt = Math.min(0.05, (now - p.last) / 1000);
+    const dt = Math.max(0, Math.min(0.05, (now - p.last) / 1000));
     p.last = now;
-    const { k, c } = this.springK(cfg.response, cfg.damping);
-    const o = this.state.open ? this.springK(cfg.mResp, cfg.mDamp) : this.springK(cfg.mClose, cfg.mCloseDamp);
+    // reduced motion: no overshoot anywhere
+    const { k, c } = this.springK(cfg.response, rm ? Math.max(1, cfg.damping) : cfg.damping);
+    const o = this.state.open ? this.springK(cfg.mResp, rm ? 1 : cfg.mDamp) : this.springK(cfg.mClose, rm ? 1 : cfg.mCloseDamp);
     const n = Math.max(1, Math.ceil(dt / (1 / 240))), h = dt / n;
     if (this.state.open !== this.lastOpen) {
       this.lastOpen = this.state.open;
@@ -54,7 +115,7 @@ export default class Landing extends DCLogic {
     const tether = this.springK(0.17, 0.72), nud = this.springK(0.46, 0.6), hs = this.springK(0.25, 0.9);
     // idle nudge: the centre card lifts a little when nobody has touched anything for a while
     const settled = !this.state.open && !p.drag && !p.gy && !p.gs && !this.swapPending && !(p.sink > 0.001) && p.v === 0 && p.open === 0 && p.rest === 0 && Math.abs(p.sv) < 0.01;
-    if (settled && !this.learned && now - (this.lastInput || 0) > 2400 && now - (this.nudgeAt || 0) > 3600) { this.nudgeAt = now; p.liftT = 12; this.liftHold = now + 190; }
+    if (settled && !rm && !this.learned && now - (this.lastInput || 0) > 2400 && now - (this.nudgeAt || 0) > 3600) { this.nudgeAt = now; p.liftT = 12; this.liftHold = now + 190; }
     if ((this.liftHold && now > this.liftHold) || !settled) { p.liftT = 0; this.liftHold = 0; }
     const hovT = (this.state.open && this.pillHover) || gOn ? 1 : 0;
     // deck swap: p.sink 0..1 sinks the fan; at the bottom the deck changes and it rises again
@@ -64,11 +125,11 @@ export default class Landing extends DCLogic {
       // a 9-card deck is laid out twice round the ring so the fan runs to the screen edges like the 16-card one
       this.SOULS = this.DECKS[nd].length < 16 ? this.DECKS[nd].concat(this.DECKS[nd]) : this.DECKS[nd]; this.fv = null;
       this.cs = this.SOULS.map(() => ({ s: 1, v: 0 })); p.sink = 1;
-      p.pos = -1.5; p.target = 0; p.v = 0; p.lastR = 0;
+      p.pos = -1.5; p.target = 0; p.v = 0;
       p.sinkT = 0; p.sinkv = 0; this.swapPending = false; this.swapAt = now; this.postSwap = true;
       this.setState({ deck: nd });
     }
-    const curIdx = this.state.deck === 'mbti' ? 0 : 1, dir = curIdx ? -1 : 1;
+    const curIdx = this.state.deck === 'mbti' ? 0 : 1;
     const togT = this.swapPending ? 1 - curIdx : curIdx; // flips once the switch is committed, on its own spring
     const sks = p.sinkT ? this.springK(0.4, 0.95) : this.springK(0.62, 0.84), tgs = this.springK(0.32, 0.86);
     for (let i = 0; i < n; i++) {
@@ -83,7 +144,7 @@ export default class Landing extends DCLogic {
         const ao = -o.k * (p.open - ot) - o.c * p.ov; p.ov += ao * h; p.open += p.ov * h;
         const ar = -rs.k * (p.rest - ot) - rs.c * p.rv; p.rv += ar * h; p.rest += p.rv * h;
       }
-      if (true) { const ac = -cs.k * (p.col - ct) - cs.c * p.colv; p.colv += ac * h; p.col += p.colv * h; }
+      { const ac = -cs.k * (p.col - ct) - cs.c * p.colv; p.colv += ac * h; p.col += p.colv * h; }
     }
     if (!p.drag && Math.abs(p.v) < 0.002 && Math.abs(p.pos - p.target) < 0.0006) { p.pos = p.target; p.v = 0; }
     if (Math.abs(p.ov) < 0.002 && Math.abs(p.open - ot) < 0.0006) { p.open = ot; p.ov = 0; }
@@ -98,8 +159,6 @@ export default class Landing extends DCLogic {
     if (Math.abs(p.togv) < 0.002 && Math.abs(p.tog - togT) < 0.0006) { p.tog = togT; p.togv = 0; }
     const liveV = p.drag ? p.drag.vel : p.v;
     p.sv += (liveV - p.sv) * Math.min(1, dt * 14);
-    const r = Math.round(p.pos);
-    if (r !== p.lastR) { p.lastR = r; this.tickSound(); }
     const N = this.SOULS.length;
     if (!this.fv) this.fv = new Array(N).fill(1);
     // each card hangs off its neighbour nearer the centre: a chain of springs, so the fan drapes and ripples
@@ -109,7 +168,7 @@ export default class Landing extends DCLogic {
       const order = [];
       for (let i = 0; i < N; i++) { let d = i - p.pos; d = ((d % N) + N * 1.5) % N - N / 2; order.push({ i, d, ad: Math.abs(d) }); }
       order.sort((x, y) => x.ad - y.ad);
-      order.forEach((o) => { o.par = o.ad < 0.5 ? -1 : (((o.i - Math.sign(o.d)) % N) + N) % N; o.k = this.springK(0.19 + 0.022 * Math.min(8, o.ad), 0.64); });
+      order.forEach((o) => { o.par = o.ad < 0.5 ? -1 : (((o.i - Math.sign(o.d)) % N) + N) % N; o.k = this.springK(0.19 + 0.022 * Math.min(8, o.ad), rm ? 1 : 0.64); });
       for (let j = 0; j < n; j++) {
         for (const o of order) {
           const c = this.cs[o.i], tg = o.par < 0 ? (p.sink || 0) : this.cs[o.par].s;
@@ -132,18 +191,22 @@ export default class Landing extends DCLogic {
       this.fv[i] += (ft - this.fv[i]) * kf;
       if (Math.abs(ft - this.fv[i]) > 0.001) fading = true; else this.fv[i] = ft;
     }
-    if (this.faceEls && this.faceEls.length && (!this.faceM.length || now - (this.lastMeasure || 0) > 1500)) {
-      this.lastMeasure = now;
+    // layout reads only when something could have changed them: mount, fonts, resize, or a React update
+    const due = this.measureDue;
+    this.measureDue = false;
+    if (this.faceEls && this.faceEls.length && (due || !this.faceM.length)) {
       const M = this.faceEls.map((el, i) => { const mk = this.markEls[i]; return el && mk ? { w: el.offsetWidth, below: el.offsetHeight - mk.offsetTop, base: mk.offsetTop } : null; });
-      if (M.every(Boolean)) { const changed = JSON.stringify(M) !== JSON.stringify(this.faceM); this.faceM = M; if (changed) this.dirty = true; }
+      if (M.every(Boolean)) { const changed = JSON.stringify(M) !== JSON.stringify(this.faceM); this.faceM = M; if (changed) { this.dirty = true; this.soulRect = null; } }
     }
-    if (this.detEl) { const hh = this.detEl.offsetHeight; if (hh && Math.abs(hh - (this.detH || 0)) > 0.5) { this.detH = hh; this.dirty = true; } }
+    if (this.els.det && due) { const hh = this.els.det.offsetHeight; if (hh && Math.abs(hh - (this.detH || 0)) > 0.5) { this.detH = hh; this.dirty = true; } }
     let glowing = false;
-    if (this.soulEl) {
+    if (this.els.soul) {
       let target = 0;
+      const readRects = this.mxMoved || p.rest !== 0;
+      this.mxMoved = false;
       if (this.mx != null) {
-        const r = this.soulEl.getBoundingClientRect();
-        const dx = Math.max(r.left - this.mx, 0, this.mx - r.right), dy = Math.max(r.top - this.my, 0, this.my - r.bottom);
+        if (readRects || !this.soulRect) this.soulRect = this.els.soul.getBoundingClientRect();
+        const r = this.soulRect;
         target = 1;
         const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
         const vx = this.mx - cx, vy = this.my - cy, vl = Math.hypot(vx, vy);
@@ -154,8 +217,9 @@ export default class Landing extends DCLogic {
         }
       }
       let near = !!(p.drag || p.gy || p.gd || this.state.open || Math.abs(p.open) > 0.01 || Math.abs(p.ov) > 0.01 || p.rest > 0.01 || (p.col || 0) > 0.01);
-      if (!near && this.mx != null && this.rootEl) {
-        const rr = this.rootEl.getBoundingClientRect();
+      if (!near && this.mx != null && this.els.root) {
+        if (readRects || !this.rootRect) this.rootRect = this.els.root.getBoundingClientRect();
+        const rr = this.rootRect;
         const yA = (this.my - rr.top) * 1440 / rr.width;
         near = yA > 430;
       }
@@ -164,53 +228,67 @@ export default class Landing extends DCLogic {
       const prev = this.prox || 0;
       this.prox = prev + (target - prev) * (1 - Math.exp(-dt / 0.35));
       if (Math.abs(this.prox - target) < 0.002) this.prox = target;
-      glowing = this.prox !== prev || this.prox > 0.002;
+      // the word only changes with prox and with the sector the pointer is in
+      glowing = this.prox !== prev;
       const sAx = this.ax == null ? 0 : this.ax, sAy = this.ay == null ? -1 : this.ay;
       let sDeg = Math.atan2(sAy, sAx) * 180 / Math.PI + 90; sDeg = ((sDeg % 360) + 360) % 360;
       const sKey = (this.mx == null || this.suppress ? 'x' : '') + Math.floor(sDeg / 360 * 9 + 0.5) % 9;
       if (sKey !== this.lastSector) { this.lastSector = sKey; glowing = true; }
     }
     const moving = p.drag || p.gy || p.gd || p.gs || this.csMoving || p.sink !== 0 || p.sinkv !== 0 || p.tog !== togT || this.swapPending || (this.swapAt && now - this.swapAt < 1500) || p.dy !== 0 || p.dyv !== 0 || p.wdy !== p.dy || p.lift !== 0 || p.liftT !== 0 || p.hov !== hovT || p.v !== 0 || p.ov !== 0 || p.rv !== 0 || p.colv !== 0 || (!this.state.open && !this.phaseB) || (this.state.open && !this.openB) || (this.openBAt && now - this.openBAt < 950) || now - (this.openAt || -1e9) < 950 || now - (this.closeAt || -1e9) < 250 || Math.abs(p.sv) > 0.001 || fading || glowing;
-    if (moving || this.dirty) { this.dirty = false; this.setState({ t: now }); }
+    // the pointer's heading keeps easing for a moment after it stops, so stay awake a little longer
+    const busy = !!(moving || this.dirty || this.measureDue || now - (this.lastMove || -1e9) < 1000);
+    if (moving || this.dirty) { this.dirty = false; this.paint(); }
+    return busy;
   }
-  tickSound() {
-    if (!this.state.sound) return;
-    try {
-      if (!this.ac) this.ac = new (window.AudioContext || window.webkitAudioContext)();
-      const t = this.ac.currentTime, osc = this.ac.createOscillator(), g = this.ac.createGain();
-      osc.type = 'triangle'; osc.frequency.value = 2000;
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.045, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.028);
-      osc.connect(g); g.connect(this.ac.destination); osc.start(t); osc.stop(t + 0.03);
-    } catch (e) {}
+  paint() {
+    const f = this.frame();
+    this.apply(f);
+    if (f.key !== this.state.key) this.setState({ key: f.key });
   }
-  curveFor(resp, damp) {
-    const key = resp + '|' + damp;
-    if (this.cKey === key) return this.cVal;
-    const { k, c } = this.springK(resp, damp);
-    let x = 0, v = 0, t = 0, settle = 0;
-    const T = 1.6, dt = 1 / 480, pts = [];
-    for (let i = 0; t <= T; i++) {
-      if (i % 4 === 0) pts.push([t, x]);
-      if (Math.abs(1 - x) > 0.01) settle = t;
-      const a = -k * (x - 1) - c * v; v += a * dt; x += v * dt; t += dt;
+  // write only what changed since the last write
+  apply(f) {
+    if (!this.w) this.w = new Map();
+    const w = this.w;
+    const put = (el, props, attr) => {
+      if (!el) return;
+      let prev = w.get(el);
+      if (!prev) w.set(el, prev = {});
+      for (const k in props) {
+        const v = String(props[k]);
+        if (prev[k] === v) continue;
+        prev[k] = v;
+        if (attr) el.setAttribute(k, v); else el.style.setProperty(kebab(k), v);
+      }
+    };
+    for (const name in f.st) put(this.els[name], f.st[name]);
+    put(this.els.pill, f.pillAttr, true);
+    // card patterns only run where someone can see them; reduced motion holds each on a still frame
+    f.cardPause.forEach((want, i) => {
+      if (this.paused[i] === want) return;
+      const el = this.els['card' + i], svg = el && el.querySelector('svg');
+      if (!svg) return;
+      this.paused[i] = want;
+      if (want) { svg.pauseAnimations(); if (this.rm) svg.setCurrentTime(1.2); } else svg.unpauseAnimations();
+    });
+    if (this.artPaused !== this.rm) {
+      const svg = this.els.art && this.els.art.querySelector('svg');
+      if (svg) { this.artPaused = this.rm; if (this.rm) { svg.pauseAnimations(); svg.setCurrentTime(1.2); } else svg.unpauseAnimations(); }
     }
-    const path = pts.map(([tt, xx], i) => (i ? 'L' : 'M') + (tt / T * 252).toFixed(1) + ' ' + (70 - Math.max(-0.3, Math.min(1.5, xx)) * 52).toFixed(1)).join(' ');
-    this.cKey = key;
-    this.cVal = { path, settle: Math.min(settle + dt, T), settleX: (Math.min(settle, T) / T * 252).toFixed(1) };
-    return this.cVal;
   }
   bez(u) {
-    const c = this.state.cfg;
+    const c = CFG;
     const X = (t) => 3 * (1 - t) * (1 - t) * t * c.fx1 + 3 * (1 - t) * t * t * c.fx2 + t * t * t;
     const Y = (t) => 3 * (1 - t) * (1 - t) * t * c.fy1 + 3 * (1 - t) * t * t * c.fy2 + t * t * t;
     let lo = 0, hi = 1, t = u;
     for (let i = 0; i < 22; i++) { t = (lo + hi) / 2; if (X(t) < u) lo = t; else hi = t; }
     return Y(t);
   }
-  renderVals() {
+  // Everything that moves, as style objects keyed by element name (the same objects seed the first render).
+  frame() {
     const N = this.SOULS.length;
-    const p = this.p;
-    const { open, cfg, hud, sound, copied, preset } = this.state;
+    const p = this.p, cfg = CFG, c01 = (v) => Math.max(0, Math.min(1, v));
+    const { open, deck } = this.state;
     const pos = p.pos;
     const active = ((Math.round(pos) % N) + N) % N;
     // K sizes the whole fan (cards, radius, gap, lift) together, so smaller cards keep the same rhythm
@@ -218,8 +296,9 @@ export default class Landing extends DCLogic {
     const restE = p.rest * (1 - 0.45 * Math.max(0, Math.min(1, (p.dy || 0) / 320)) * Math.max(0, Math.min(1, p.open)));
     const op01 = Math.max(0, Math.min(1, restE));
     const sheetOn = open || Math.abs(p.open) > 0.002 || Math.abs(p.ov) > 0.01 || p.rest > 0.002;
-    const lean = Math.max(-1, Math.min(1, p.sv / 5)) * cfg.lean;
-    const cards = this.SOULS.map((s, i) => {
+    const lean = this.rm ? 0 : Math.max(-1, Math.min(1, p.sv / 5)) * cfg.lean;
+    const st = {}, cardPause = [];
+    for (let i = 0; i < N; i++) {
       let d = i - pos;
       d = ((d % N) + N * 1.5) % N - N / 2;
       const ad = Math.abs(d);
@@ -241,63 +320,140 @@ export default class Landing extends DCLogic {
       const L = (a, b) => a + (b - a) * m;
       const cst = this.cs && this.cs[i] ? this.cs[i] : { s: 0, v: 0 };
       const sl = Math.max(-0.08, Math.min(1, cst.s / 0.6)), slc = Math.max(0, sl);
-      return {
-        s, label: s.name,
-        x: (L(wx, ox) - (wx + 116 - 720) * 0.22 * slc).toFixed(1), y: (L(wy, oy) + 680 * sl).toFixed(1), a: (L(wa, oa) + Math.sign(d) * slc * 10 + Math.max(-6, Math.min(6, cst.v * 2.2)) * Math.sign(d)).toFixed(2), sc: (L(ws, os) * (1 - 0.08 * slc)).toFixed(4), ry: L(wry, 0).toFixed(2),
-        op: (isActive ? (sheetOn ? 0 : wop) : (wop + (oop - wop) * op01)).toFixed(3),
-        br: (1 - cfg.dim * f * (1 - op01)).toFixed(3),
-        sh: '0 ' + Math.round(18 + 14 * e) + 'px ' + Math.round(34 + 20 * e) + 'px -18px rgba(20,18,16,' + (cfg.shadow * (0.35 + 0.65 * e)).toFixed(3) + ')',
-        z: isActive && op01 > 0.01 ? 120 : 100 - Math.round(ad * 10),
-        click: () => {
-          if (p.moved > 6 || open || (p.sink || 0) > 0.01 || this.swapPending) return;
-          if (isActive) this.setState({ open: true });
-          else { p.target = Math.round(p.target) + Math.round(d); this.dirty = true; }
-        }
+      const x = L(wx, ox) - (wx + 116 - 720) * 0.22 * slc, y = L(wy, oy) + 680 * sl;
+      const op = isActive ? (sheetOn ? 0 : wop) : (wop + (oop - wop) * op01);
+      st['card' + i] = {
+        transform: 'translate(' + x.toFixed(1) + 'px, ' + y.toFixed(1) + 'px) rotate(' + (L(wa, oa) + Math.sign(d) * slc * 10 + Math.max(-6, Math.min(6, cst.v * 2.2)) * Math.sign(d)).toFixed(2) + 'deg) perspective(1400px) rotateY(' + L(wry, 0).toFixed(2) + 'deg) scale(' + (L(ws, os) * (1 - 0.08 * slc)).toFixed(4) + ')',
+        opacity: op.toFixed(3),
+        zIndex: isActive && op01 > 0.01 ? 120 : 100 - Math.round(ad * 10),
+        filter: 'brightness(' + (1 - cfg.dim * f * (1 - op01)).toFixed(3) + ')',
+        boxShadow: '0 ' + Math.round(18 + 14 * e) + 'px ' + Math.round(34 + 20 * e) + 'px -18px rgba(20,18,16,' + (cfg.shadow * (0.35 + 0.65 * e)).toFixed(3) + ')'
+      };
+      // off the window, invisible, or under the full-strength scrim
+      const ext = this.ext || 0, exty = this.exty || 0;
+      cardPause[i] = this.rm || op < 0.001 || op01 > 0.98 || x < -300 - ext || x > 1460 + ext || y > 920 + exty;
+    }
+    // the hero word: typeface follows the pointer's direction, colour warms with proximity
+    if (!this.faceEls) { this.faceEls = []; this.markEls = []; this.faceM = []; }
+    const ax = this.ax == null ? 0 : this.ax, ay = this.ay == null ? -1 : this.ay;
+    let deg = Math.atan2(ay, ax) * 180 / Math.PI + 90; deg = ((deg % 360) + 360) % 360;
+    const kn = Math.floor(deg / 360 * (FACES.length - 1) + 0.5) % (FACES.length - 1);
+    const sel = (this.mx == null || this.suppress) ? 0 : kn + 1;
+    const measured = this.faceM.length === FACES.length;
+    const baseW = measured ? this.faceM[0].w : 150;
+    const gc = GLOW[Math.floor(deg / 360 * GLOW.length + 0.5) % GLOW.length], prox = this.prox || 0;
+    const soulColor = 'rgb(' + [20, 18, 16].map((v, j) => Math.round(v + (gc[j] - v) * prox)).join(',') + ')';
+    st.soul = { width: baseW.toFixed(1) + 'px' };
+    FACES.forEach((_, i) => {
+      const m = this.faceM[i];
+      st['face' + i] = {
+        bottom: (m ? (-m.below).toFixed(1) : -14) + 'px', color: soulColor, opacity: i === sel ? 1 : 0,
+        transformOrigin: '0 ' + (m ? m.base.toFixed(1) : 0) + 'px', transform: 'scale(' + (m && m.w ? (baseW / m.w).toFixed(4) : 1) + ')'
       };
     });
-    const setCfg = (key, val, keepPreset) => this.setState({ cfg: Object.assign({}, this.state.cfg, { [key]: val }), preset: keepPreset ? this.state.preset : null });
-    const S = (key, label, min, max, step, fmt) => {
-      const v = cfg[key];
-      return { label, min, max, step, v, shown: fmt(v), fill: ((v - min) / (max - min) * 100).toFixed(1), set: (e) => setCfg(key, Number(e.target.value)) };
-    };
-    const sections = [
-      { title: 'OPEN · MORPH', items: [
-        S('mResp', 'Open response', 0.2, 1.4, 0.01, (v) => v.toFixed(2) + 's'),
-        S('mDamp', 'Open damping', 0.4, 1.2, 0.01, (v) => v.toFixed(2)),
-        S('mClose', 'Close response', 0.2, 1.2, 0.01, (v) => v.toFixed(2) + 's'),
-        S('mCloseDamp', 'Close damping', 0.4, 1.2, 0.01, (v) => v.toFixed(2)),
-        S('squash', 'Squash & stretch', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'),
-        S('drop', 'Other cards drop', 0, 600, 10, (v) => v + 'px'),
-        S('blur', 'Backdrop blur', 0, 20, 0.5, (v) => v + 'px'),
-        S('tint', 'Backdrop tint', 0, 0.9, 0.01, (v) => Math.round(v * 100) + '%') ] },
-      { title: 'SPRING', items: [
-        S('response', 'Response', 0.15, 1.2, 0.01, (v) => v.toFixed(2) + 's'),
-        S('damping', 'Damping', 0.2, 1.2, 0.01, (v) => v.toFixed(2)) ] },
-      { title: 'FLICK & SCROLL', items: [
-        S('decel', 'Momentum', 0.99, 0.999, 0.0005, (v) => v.toFixed(4)),
-        S('dragPx', 'Drag per card', 100, 300, 5, (v) => v + 'px'),
-        S('wheelPx', 'Scroll per card', 60, 400, 10, (v) => v + 'px'),
-        S('snapMs', 'Scroll snap delay', 40, 400, 10, (v) => v + 'ms') ] },
-      { title: 'GEOMETRY', items: [
-        S('radius', 'Wheel radius', 700, 1800, 10, (v) => v + 'px'),
-        S('spacing', 'Card spacing', 5, 16, 0.1, (v) => v.toFixed(1) + '°'),
-        S('gap', 'Centre gap', 0, 180, 2, (v) => v + 'px'),
-        S('visible', 'Visible each side', 2, 5, 0.1, (v) => v.toFixed(1)) ] },
-      { title: 'DEPTH', items: [
-        S('sideScale', 'Side cards shrink to', 0.5, 1, 0.01, (v) => Math.round(v * 100) + '%'),
-        S('depthRange', 'Over', 0.5, 5, 0.1, (v) => v.toFixed(1) + ' cards'),
-        S('turn', '3D turn (\u2212 away \u00b7 + toward)', -45, 45, 0.5, (v) => (v > 0 ? '+' : '') + v.toFixed(1) + '\u00b0') ] },
-      { title: 'FEEL', items: [
-        S('lean', 'Lean with speed', 0, 14, 0.5, (v) => v.toFixed(1) + '°'),
-        S('lift', 'Centre lift', 0, 48, 1, (v) => v + 'px'),
-        S('scale', 'Centre scale', 1, 1.15, 0.005, (v) => v.toFixed(3)),
-        S('shadow', 'Shadow', 0, 0.5, 0.01, (v) => Math.round(v * 100) + '%') ] }
-    ];
-    const presets = Object.keys(this.PRESETS).map((name) => ({
-      name, bg: preset === name ? '#FFFFFF' : 'transparent', sh: preset === name ? '0 1px 2px rgba(0,0,0,0.14), 0 0 0 0.5px rgba(0,0,0,0.06)' : 'none',
-      pick: () => this.setState({ cfg: Object.assign({}, this.state.cfg, this.PRESETS[name]), preset: name })
-    }));
-    const cv = this.curveFor(cfg.response, cfg.damping);
+    const heroOp = (1 - op01).toFixed(3);
+    st.hero = { opacity: heroOp, transform: 'translateY(' + (-16 * op01).toFixed(1) + 'px)' };
+    st.bar = { opacity: heroOp };
+    // the details window morphs out of the centre card
+    let pillAttr;
+    {
+      const m = p.open;
+      const P0 = this.pose || { wx: 604, wy: 458, wa: 0, ws: 1 };
+      const W0 = 232 * P0.ws, H0 = 324 * P0.ws, cx0 = P0.wx + 116, cy0 = P0.wy + 162;
+      const PAD = 40, GAP = 40, TEXTW = 400, ART = 1.2;
+      const cardW = 232 * ART, cardH = 324 * ART;
+      const textH = this.detH || 360;
+      const innerH = Math.max(cardH, textH);
+      const W1 = PAD + cardW + GAP + TEXTW + PAD, H1 = innerH + PAD * 2, cx1 = 720, cy1 = 470;
+      const L = (a, b) => a + (b - a) * m;
+      const mS = open ? m : c01(p.rest);
+      const LS = (a, b) => a + (b - a) * mS;
+      const col = p.col == null ? 0 : p.col;
+      const LC = (a, b) => a + (b - a) * col;
+      const artY1 = PAD + (innerH - cardH) / 2;
+      const WT = LC(cardW, W1), HT = LC(cardH, H1), cxT = cx1, cyT = cy1;
+      const artXT = LC(0, PAD), artYT = LC(0, artY1), RT = LC(20 * ART, 28);
+      this.slotDy = cy0 - cyT;
+      const dyE = (p.wdy || 0) * c01(m), gsc = 1 - 0.07 * c01((p.wdy || 0) / 320) * c01(m);
+      const W = LS(W0, WT), H = LS(H0, HT), cx = L(cx0, cxT), cy = L(cy0, cyT) + dyE;
+      const sq = cfg.squash * Math.max(-1, Math.min(1, p.ov / 6)) * 0.06;
+      // the pill: above the centre card on the wheel, floating just outside the window when open
+      const mc = c01(m);
+      const pillX = cx, pillY = cy - H * gsc / 2 - L(18, 14) + ((p.dy || 0) - (p.wdy || 0)) * mc;
+      const tn0 = performance.now(), pr = this.pillPrev;
+      if (!pr || tn0 - pr.t > 4) {
+        const inst = pr ? (pillY - pr.y) / ((tn0 - pr.t) / 1000) : 0;
+        this.pillV = (this.pillV || 0) * 0.6 + (Math.abs(inst) < 6000 ? inst : 0) * 0.4;
+        this.pillPrev = { y: pillY, t: tn0 };
+      }
+      const hv = c01(p.hov || 0);
+      const pwid = L(34, 44) + 10 * hv;
+      const bend = Math.max(-9, Math.min(9, (this.pillV || 0) / 70)) - 8 * c01((p.lift || 0) / 12) * (1 - mc);
+      this.pillPos = { x: pillX, y: pillY };
+      const wheelF = sheetOn ? 1 : c01(1 - Math.abs(pos - Math.round(pos)) * 5) * c01(1 - Math.abs(p.sv) * 1.5);
+      pillAttr = {
+        d: 'M' + (pillX - pwid / 2).toFixed(1) + ' ' + pillY.toFixed(1) + 'L' + pillX.toFixed(1) + ' ' + (pillY + bend).toFixed(1) + 'L' + (pillX + pwid / 2).toFixed(1) + ' ' + pillY.toFixed(1),
+        'stroke-opacity': ((L(0.36, 0.24) + 0.28 * hv) * wheelF * (1 - c01((p.sink || 0) * 6))).toFixed(3)
+      };
+      const vis = sheetOn ? 'visible' : 'hidden', pe = open ? 'auto' : 'none';
+      st.scrim = { background: 'rgba(244,240,232,' + (cfg.tint * c01(restE)).toFixed(3) + ')', backdropFilter: 'blur(' + (cfg.blur * c01(restE)).toFixed(2) + 'px)', WebkitBackdropFilter: 'blur(' + (cfg.blur * c01(restE)).toFixed(2) + 'px)', pointerEvents: pe, visibility: vis };
+      st.sheet = {
+        visibility: vis, width: Math.max(1, W).toFixed(1) + 'px', height: Math.max(1, H).toFixed(1) + 'px',
+        transform: 'translate(' + (cx - W / 2).toFixed(1) + 'px, ' + (cy - H / 2).toFixed(1) + 'px) rotate(' + L(P0.wa, 0).toFixed(2) + 'deg) scale(' + ((1 + sq) * gsc).toFixed(4) + ', ' + ((1 - sq) * gsc).toFixed(4) + ')',
+        borderRadius: LS(20 * P0.ws, RT).toFixed(1) + 'px',
+        boxShadow: '0 ' + Math.round(L(24, 50)) + 'px ' + Math.round(L(40, 110)) + 'px -24px rgba(20,18,16,' + L(0.25, 0.32).toFixed(3) + '), 0 0 0 0.5px rgba(20,18,16,' + (0.1 * c01(m)).toFixed(3) + ')',
+        pointerEvents: pe
+      };
+      st.art = { left: LS(0, artXT).toFixed(1) + 'px', top: LS(0, artYT).toFixed(1) + 'px', transform: 'scale(' + LS(P0.ws, ART).toFixed(4) + ')', boxShadow: '0 18px 40px -22px rgba(20,18,16,' + (0.35 * c01(m)).toFixed(3) + ')' };
+      st.det = { left: Math.round(PAD + cardW + GAP) + 'px', top: Math.round(PAD + (innerH - textH) / 2) + 'px' };
+      // the details text rises in, one line after another, once the window has unfolded
+      for (let i = 0; i < 5; i++) {
+        const tn = performance.now();
+        let e;
+        const colF = c01((p.col - 0.55) / 0.45);
+        if (open) { const q = this.openB ? c01((tn - this.openBAt - 120 - i * 50) / 420) : 0; e = 1 - Math.pow(1 - q, 3); }
+        else { e = Math.min(1 - c01((tn - (this.closeAt || 0)) / 110), colF); }
+        st['d' + i] = { opacity: e.toFixed(3), transform: 'translateY(' + ((1 - e) * 10).toFixed(1) + 'px)', filter: 'blur(' + ((1 - e) * 4).toFixed(2) + 'px)' };
+        if (i === 0) st.closeBtn = { opacity: e.toFixed(3) };
+      }
+    }
+    // the deck toggle and the rolodex flip between deck names
+    const other = deck === 'mbti' ? 'ennea' : 'mbti';
+    const W0 = 112, W1 = 148, t = p.tog || 0;
+    const armed = (p.sink || 0) > 0.14;
+    st.toggle = { opacity: (1 - 0.6 * c01(p.rest || 0)).toFixed(3), pointerEvents: open ? 'none' : 'auto' };
+    st.thumb = { left: (3 + W0 * t).toFixed(1) + 'px', width: (W0 + (W1 - W0) * t).toFixed(1) + 'px' };
+    st.opt0 = { color: t < 0.5 ? '#141210' : '#6B6358' };
+    st.opt1 = { color: t >= 0.5 ? '#141210' : '#6B6358' };
+    // driven by the centre card's own spring: first half while it sinks, second half as the new centre lands
+    const cc = this.cs && this.cs[this.centreI] ? this.cs[this.centreI] : { s: 0, v: 0 };
+    const cl = cc.s / 0.6;
+    let prog, o;
+    if (!this.postSwap) { prog = 0.5 * Math.min(1.08, Math.max(0, cl)); o = c01(cl * 3); }
+    else { const r = 1 - Math.min(1, cl); prog = 0.5 + 0.5 * r; o = 1 - c01((r - 0.8) / 0.2); }
+    const from = this.postSwap ? other : deck, to = this.postSwap ? deck : other;
+    // the front card tips forward on its bottom hinge as the fan sinks; the next card is revealed behind it
+    const ang = this.postSwap ? 90 + 90 * c01(prog * 2 - 1) : 180 * prog;
+    const rev = this.postSwap ? 1 : c01((ang - 30) / 60);
+    st.flip = { opacity: o.toFixed(3), filter: 'blur(' + (8 * (1 - o)).toFixed(2) + 'px)' };
+    st.hint = { opacity: p.gs ? 1 : 0 };
+    st.back = { transform: 'translateY(' + (-10 * (1 - rev)).toFixed(2) + 'px) scale(' + (0.9 + 0.1 * rev).toFixed(4) + ')', opacity: rev.toFixed(3), filter: 'blur(' + (10 * (1 - rev)).toFixed(2) + 'px)' };
+    st.front = { transform: 'rotateX(' + (-ang).toFixed(2) + 'deg)', opacity: (1 - c01((ang - 35) / 50)).toFixed(3), filter: 'blur(' + (10 * c01((ang - 15) / 70)).toFixed(2) + 'px)' };
+    const plHint = armed || this.swapPending ? 'RELEASE TO SWITCH' : 'PULL DOWN TO SWITCH';
+    return { st, pillAttr, cardPause, active, from, to, plHint, key: [active, from, to, plHint].join('|') };
+  }
+  cardClick(i) {
+    const p = this.p, N = this.SOULS.length;
+    if (p.moved > 6 || this.state.open || (p.sink || 0) > 0.01 || this.swapPending) return;
+    let d = i - p.pos; d = ((d % N) + N * 1.5) % N - N / 2;
+    if (i === ((Math.round(p.pos) % N) + N) % N) this.setState({ open: true });
+    else { p.target = Math.round(p.target) + Math.round(d); this.dirty = true; }
+  }
+  renderVals() {
+    const f = this.frame();
+    const p = this.p;
+    const { open, deck } = this.state;
+    const cfg = CFG;
     const upFn = () => {
       if (p.gs) {
         const idle = performance.now() - p.gs.lt > 90;
@@ -346,225 +502,28 @@ export default class Landing extends DCLogic {
       const d = cfg.decel;
       p.target = Math.round(p.pos + (vel / 1000) * d / (1 - d));
     };
-    const PX0 = 16, PY0 = 14, PW = 224, PH = 120;
-    const bx = (t) => 3 * (1 - t) * (1 - t) * t * cfg.fx1 + 3 * (1 - t) * t * t * cfg.fx2 + t * t * t;
-    const by = (t) => 3 * (1 - t) * (1 - t) * t * cfg.fy1 + 3 * (1 - t) * t * t * cfg.fy2 + t * t * t;
-    let fPath = '';
-    for (let i = 0; i <= 48; i++) { const t = i / 48; fPath += (i ? 'L' : 'M') + (PX0 + bx(t) * PW).toFixed(1) + ' ' + (PY0 + by(t) * PH).toFixed(1) + ' '; }
-    const fDots = [], fGrid = [], readout = [], fs = {};
-    for (let d = 1; d <= 5; d++) {
-      const u = d / cfg.fadeRange;
-      fs['fs' + d] = { x: 0, y: 0, ty: 0, o: 0 };
-      if (u <= 1) { const fv0 = this.bez(u), yy0 = PY0 + fv0 * PH; fs['fs' + d] = { x: (PX0 + u * PW).toFixed(1), y: yy0.toFixed(1), ty: (yy0 - 8).toFixed(1), o: 1 }; }
-      if (u <= 1) { fGrid.push({ x: (PX0 + u * PW).toFixed(1) }); const fv = this.bez(u); const yy = PY0 + fv * PH; fDots.push({ x: (PX0 + u * PW).toFixed(1), y: yy.toFixed(1), ty: (yy - 8).toFixed(1), label: '\u00b1' + d }); }
-      if (d <= 3) readout.push('\u00b1' + d + ' ' + Math.round((1 - (1 - cfg.fadeTo) * this.bez(Math.min(1, u))) * 100) + '%');
-    }
-    const FP = { Linear: [0, 0, 1, 1], 'Ease in': [0.42, 0, 1, 1], 'Ease out': [0, 0, 0.58, 1], 'In-out': [0.45, 0, 0.55, 1], Hold: [0.75, 0, 0.9, 0.6] };
-    const same = (a) => Math.abs(a[0] - cfg.fx1) < 0.005 && Math.abs(a[1] - cfg.fy1) < 0.005 && Math.abs(a[2] - cfg.fx2) < 0.005 && Math.abs(a[3] - cfg.fy2) < 0.005;
-    const fPresets = Object.keys(FP).map((name) => ({ name, bg: same(FP[name]) ? '#FFFFFF' : 'transparent', sh: same(FP[name]) ? '0 1px 2px rgba(0,0,0,0.14), 0 0 0 0.5px rgba(0,0,0,0.06)' : 'none',
-      pick: () => this.setState({ cfg: Object.assign({}, this.state.cfg, { fx1: FP[name][0], fy1: FP[name][1], fx2: FP[name][2], fy2: FP[name][3] }), preset: null }) }));
-    const hTo = (e) => {
-      if (!this.hdrag) return;
-      const svg = e.currentTarget, r = svg.getBoundingClientRect();
-      const sx = (e.clientX - r.left) * 256 / r.width, sy = (e.clientY - r.top) * 156 / r.height;
-      const u = Math.max(0, Math.min(1, (sx - PX0) / PW)), v = Math.max(-0.4, Math.min(1.4, (sy - PY0) / PH));
-      const k = this.hdrag === 1 ? { fx1: +u.toFixed(3), fy1: +v.toFixed(3) } : { fx2: +u.toFixed(3), fy2: +v.toFixed(3) };
-      this.setState({ cfg: Object.assign({}, this.state.cfg, k), preset: null });
-    };
-    const hDown = (n) => (e) => { e.stopPropagation(); this.hdrag = n; try { e.target.ownerSVGElement.setPointerCapture(e.pointerId); } catch (err) {} };
-    const fItems = [
-      S('fadeTo', 'Fade to', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'),
-      S('fadeRange', 'Over', 0.5, 6, 0.1, (v) => v.toFixed(1) + ' cards'),
-      S('dim', 'Also dim by', 0, 0.5, 0.01, (v) => Math.round(v * 100) + '%'),
-      S('fadeIn', 'Brighten in', 0, 0.8, 0.01, (v) => v === 0 ? 'instant' : Math.round(v * 1000) + 'ms'),
-      S('fadeOut', 'Dim out', 0, 0.8, 0.01, (v) => v === 0 ? 'instant' : Math.round(v * 1000) + 'ms')
-    ];
+    const pickDeck = (to) => () => { if (deck !== to && !this.swapPending && !open) { this.swapPending = true; this.postSwap = false; p.sinkT = 1; p.sinkv = 1.2; this.dirty = true; } };
+    const NM = { mbti: ['MBTI', '16 SOULS'], ennea: ['Enneagram', '9 SOULS'] };
     return {
-      ...fs,
-      mPresets: (() => {
-        const MP = {
-          Smooth: { mResp: 0.5, mDamp: 1, mClose: 0.5, mCloseDamp: 1, dStart: 0.4, dStagger: 0.06, dDur: 0.36, dRise: 12, dBlur: 0, squash: 0 },
-          Snappy: { mResp: 0.5, mDamp: 0.85, mClose: 0.4, mCloseDamp: 0.95, dStart: 0.35, dStagger: 0.05, dDur: 0.3, dRise: 10, dBlur: 0, squash: 0 },
-          Bouncy: { mResp: 0.5, mDamp: 0.7, mClose: 0.45, mCloseDamp: 0.85, dStart: 0.35, dStagger: 0.06, dDur: 0.32, dRise: 14, dBlur: 0, squash: 0.4 },
-          Island: { mResp: 0.32, mDamp: 0.75, mClose: 0.3, mCloseDamp: 0.82, dStart: 0.28, dStagger: 0.04, dDur: 0.3, dRise: 6, dBlur: 8, squash: 0.6 }
-        };
-        const same = (o) => Object.keys(o).every((k) => Math.abs(cfg[k] - o[k]) < 0.001);
-        return Object.keys(MP).map((name) => ({ name, bg: same(MP[name]) ? '#FFFFFF' : 'transparent', sh: same(MP[name]) ? '0 1px 2px rgba(0,0,0,0.14), 0 0 0 0.5px rgba(0,0,0,0.06)' : 'none',
-          pick: () => { this.setState({ cfg: Object.assign({}, this.state.cfg, MP[name]), preset: null, open: false }); setTimeout(() => this.setState({ open: true }), 450); } }));
-      })(),
-      cards, sections, presets, fPresets, fItems, fPath, fDots, fGrid,
-      fReadout: readout.join('  \u00b7  '),
-      bezLabel: 'bezier(' + [cfg.fx1, cfg.fy1, cfg.fx2, cfg.fy2].map((n) => (+n).toFixed(2)).join(', ') + ')',
-      rangeLabel: cfg.fadeRange.toFixed(1) + ' cards',
-      h1x: (PX0 + cfg.fx1 * PW).toFixed(1), h1y: (PY0 + cfg.fy1 * PH).toFixed(1),
-      h2x: (PX0 + cfg.fx2 * PW).toFixed(1), h2y: (PY0 + cfg.fy2 * PH).toFixed(1),
-      h1Down: hDown(1), h2Down: hDown(2), hMove: hTo, hUp: () => { this.hdrag = 0; },
-      curve: cv.path, settle: cv.settle.toFixed(2), settleX: cv.settleX,
-      cur: this.SOULS[active],
-      soulRef: (el) => { this.soulEl = el; },
-      detRef: (el) => { this.detEl = el; },
-      rootRef: (el) => { this.rootEl = el; },
-      ...(() => {
-        const F = [
-          { ff: "'Instrument Serif', Georgia, serif", st: 'italic', w: 400, fs: 1, ls: -0.03 },
-          { ff: "'Bodoni Moda', Didot, serif", st: 'italic', w: 700, fs: 0.92, ls: -0.03 },
-          { ff: "'Bricolage Grotesque', sans-serif", st: 'normal', w: 800, fs: 0.86, ls: -0.05 },
-          { ff: "Caveat, cursive", st: 'normal', w: 700, fs: 1.12, ls: -0.01 },
-          { ff: "'Young Serif', Georgia, serif", st: 'normal', w: 400, fs: 0.86, ls: -0.03 },
-          { ff: "'Space Mono', monospace", st: 'normal', w: 700, fs: 0.8, ls: -0.06 },
-          { ff: "'DM Serif Display', Georgia, serif", st: 'normal', w: 400, fs: 0.9, ls: -0.03 },
-          { ff: "Quicksand, sans-serif", st: 'normal', w: 600, fs: 0.9, ls: -0.04 },
-          { ff: "Unbounded, sans-serif", st: 'normal', w: 700, fs: 0.72, ls: -0.05 },
-          { ff: "Anton, Impact, sans-serif", st: 'normal', w: 400, fs: 0.96, ls: 0 }
-        ];
-        if (!this.faceEls) { this.faceEls = []; this.markEls = []; this.faceM = []; }
-        const n = F.length - 1;
-        const ax = this.ax == null ? 0 : this.ax, ay = this.ay == null ? -1 : this.ay;
-        let deg = Math.atan2(ay, ax) * 180 / Math.PI + 90; deg = ((deg % 360) + 360) % 360;
-        const kn = Math.floor(deg / 360 * n + 0.5) % n;
-        const t = this.prox || 0;
-        const sel = (this.mx == null || this.suppress) ? 0 : kn + 1;
-        const measured = this.faceM.length === F.length;
-        const baseW = measured ? this.faceM[0].w : 150;
-        const faces = F.map((f, i) => {
-          const m = this.faceM[i];
-          return Object.assign({}, f, {
-            op: i === sel ? 1 : 0,
-            sc: m && m.w ? (baseW / m.w).toFixed(4) : 1,
-            oy: m ? m.base.toFixed(1) : 0,
-            bo: m ? (-m.below).toFixed(1) : -14,
-            ref: (el) => { this.faceEls[i] = el; },
-            mref: (el) => { this.markEls[i] = el; }
-          });
-        });
-        return { soulFaces: faces, soulW: baseW.toFixed(1) };
-      })(),
-      soulColor: (() => {
-        const P = [[198,43,39],[224,80,26],[156,111,0],[95,122,14],[46,125,79],[28,128,116],[30,95,208],[106,82,217],[201,37,96]];
-        const ink = [20,18,16];
-        const ax = this.ax == null ? 0 : this.ax, ay = this.ay == null ? -1 : this.ay;
-        let deg = Math.atan2(ay, ax) * 180 / Math.PI + 90;
-        deg = ((deg % 360) + 360) % 360;
-        const c = P[Math.floor(deg / 360 * P.length + 0.5) % P.length];
-        const t = this.prox || 0;
-        return 'rgb(' + ink.map((v, j) => Math.round(v + (c[j] - v) * t)).join(',') + ')';
-      })(),
-      heroOp: (1 - op01).toFixed(3), heroY: (-16 * op01).toFixed(1),
-      ...(() => {
-        const m = p.open, c01 = (v) => Math.max(0, Math.min(1, v));
-        const P0 = this.pose || { wx: 604, wy: 458, wa: 0, ws: 1 };
-        const W0 = 232 * P0.ws, H0 = 324 * P0.ws, cx0 = P0.wx + 116, cy0 = P0.wy + 162;
-        const PAD = 40, GAP = 40, TEXTW = 400, ART = 1.2;
-        const cardW = 232 * ART, cardH = 324 * ART;
-        const textH = this.detH || 360;
-        const innerH = Math.max(cardH, textH);
-        const W1 = PAD + cardW + GAP + TEXTW + PAD, H1 = innerH + PAD * 2, cx1 = 720, cy1 = 470;
-        const L = (a, b) => a + (b - a) * m;
-        const mS = open ? m : c01(p.rest);
-        const LS = (a, b) => a + (b - a) * mS;
-        const col = p.col == null ? 0 : p.col;
-        const LC = (a, b) => a + (b - a) * col;
-        const artY1 = PAD + (innerH - cardH) / 2;
-        const WT = LC(cardW, W1), HT = LC(cardH, H1), cxT = cx1, cyT = cy1;
-        const artXT = LC(0, PAD), artYT = LC(0, artY1), RT = LC(20 * ART, 28);
-        this.slotDy = cy0 - cyT;
-        const dyE = (p.wdy || 0) * c01(m), gsc = 1 - 0.07 * c01((p.wdy || 0) / 320) * c01(m);
-        const W = LS(W0, WT), H = LS(H0, HT), cx = L(cx0, cxT), cy = L(cy0, cyT) + dyE;
-        const sq = cfg.squash * Math.max(-1, Math.min(1, p.ov / 6)) * 0.06;
-        const bgA = 1;
-        // the pill: above the centre card on the wheel, floating just outside the window when open
-        const mc = c01(m);
-        const pillX = cx, pillY = cy - H * gsc / 2 - L(18, 14) + ((p.dy || 0) - (p.wdy || 0)) * mc;
-        const tn0 = performance.now(), pr = this.pillPrev;
-        if (!pr || tn0 - pr.t > 4) {
-          const inst = pr ? (pillY - pr.y) / ((tn0 - pr.t) / 1000) : 0;
-          this.pillV = (this.pillV || 0) * 0.6 + (Math.abs(inst) < 6000 ? inst : 0) * 0.4;
-          this.pillPrev = { y: pillY, t: tn0 };
-        }
-        const hv = c01(p.hov || 0);
-        const pwid = L(34, 44) + 10 * hv;
-        const bend = Math.max(-9, Math.min(9, (this.pillV || 0) / 70)) - 8 * c01((p.lift || 0) / 12) * (1 - mc);
-        this.pillPos = { x: pillX, y: pillY };
-        const wheelF = sheetOn ? 1 : c01(1 - Math.abs(pos - Math.round(pos)) * 5) * c01(1 - Math.abs(p.sv) * 1.5);
-        const out = {
-          pillD: 'M' + (pillX - pwid / 2).toFixed(1) + ' ' + pillY.toFixed(1) + 'L' + pillX.toFixed(1) + ' ' + (pillY + bend).toFixed(1) + 'L' + (pillX + pwid / 2).toFixed(1) + ' ' + pillY.toFixed(1),
-          pillO: ((L(0.36, 0.24) + 0.28 * hv) * wheelF * (1 - c01((p.sink || 0) * 6))).toFixed(3),
-          shBgA: bgA.toFixed(3),
-          shSx: ((1 + sq) * gsc).toFixed(4), shSy2: ((1 - sq) * gsc).toFixed(4),
-          sheetVis: sheetOn ? 'visible' : 'hidden', panelPe: open ? 'auto' : 'none',
-          shW: Math.max(1, W).toFixed(1), shH: Math.max(1, H).toFixed(1), shX: (cx - W / 2).toFixed(1), shY: (cy - H / 2).toFixed(1), shA: L(P0.wa, 0).toFixed(2),
-          shR: LS(20 * P0.ws, RT).toFixed(1), shSy: Math.round(L(24, 50)), shSb: Math.round(L(40, 110)), shSa: (L(0.25, 0.32) * bgA).toFixed(3), shBorder: (0.1 * c01(m) * bgA).toFixed(3),
-          artX: LS(0, artXT).toFixed(1), artY: LS(0, artYT).toFixed(1), artS: LS(P0.ws, ART).toFixed(4), artSh: (0.35 * c01(m)).toFixed(3),
-          scrimA: (cfg.tint * c01(restE)).toFixed(3), scrimBlur: (cfg.blur * c01(restE)).toFixed(2), detX: Math.round(PAD + cardW + GAP), detY: Math.round(PAD + (innerH - textH) / 2)
-        };
-        for (let i = 0; i < 5; i++) {
-          const tn = performance.now();
-          let e;
-          const colF = c01((p.col - 0.55) / 0.45);
-          if (open) { const q = this.openB ? c01((tn - this.openBAt - 120 - i * 50) / 420) : 0; e = 1 - Math.pow(1 - q, 3); }
-          else { e = Math.min(1 - c01((tn - (this.closeAt || 0)) / 110), colF); }
-          out['q' + i] = e.toFixed(3); out['y' + i] = ((1 - e) * 10).toFixed(1); out['b' + i] = ((1 - e) * 4).toFixed(2);
-        }
-        return out;
-      })(),
-      counter: String((active % this.DECKS[this.state.deck].length) + 1).padStart(2, '0') + ' / ' + this.DECKS[this.state.deck].length,
-      ...(() => {
-        const c01 = (v) => Math.max(0, Math.min(1, v));
-        const deck = this.state.deck, other = deck === 'mbti' ? 'ennea' : 'mbti';
-        const NAMES = { mbti: ['MBTI', '16 souls, one for each type'], ennea: ['Enneagram', '9 souls, one for each type'] };
-        const W0 = 112, W1 = 148, t = p.tog || 0;
-        const sink = p.sink || 0, armed = sink > 0.14;
-        const target = this.swapPending || p.gs ? other : deck;
-        const showName = (p.gs || this.swapPending) ? NAMES[other] : NAMES[deck];
-        return {
-          tgX: 720 - (W0 + W1 + 6) / 2, tgO: (1 - 0.6 * c01(p.rest || 0)).toFixed(3), tgPe: open ? 'none' : 'auto',
-          thX: (3 + W0 * t).toFixed(1), thW: (W0 + (W1 - W0) * t).toFixed(1),
-          tc0: t < 0.5 ? '#141210' : '#6B6358', tc1: t >= 0.5 ? '#141210' : '#6B6358',
-          isMbti: deck === 'mbti' ? 'true' : 'false', isEnnea: deck === 'ennea' ? 'true' : 'false',
-          pickMbti: () => { if (deck !== 'mbti' && !this.swapPending && !open) { this.swapPending = true; this.postSwap = false; p.sinkT = 1; p.sinkv = 1.2; this.dirty = true; } },
-          pickEnnea: () => { if (deck !== 'ennea' && !this.swapPending && !open) { this.swapPending = true; this.postSwap = false; p.sinkT = 1; p.sinkv = 1.2; this.dirty = true; } },
-          ...(() => {
-            // a rolodex flip between the two decks.
-            // Driven by the centre card's own spring: first half while it sinks, second half as the new centre lands.
-            const cc = this.cs && this.cs[this.centreI] ? this.cs[this.centreI] : { s: 0, v: 0 };
-            const cl = cc.s / 0.6;
-            let prog, o;
-            if (!this.postSwap) { prog = 0.5 * Math.min(1.08, Math.max(0, cl)); o = c01(cl * 3); }
-            else { const r = 1 - Math.min(1, cl); prog = 0.5 + 0.5 * r; o = 1 - c01((r - 0.8) / 0.2); }
-            const from = this.postSwap ? other : deck, to = this.postSwap ? deck : other;
-            const NM = { mbti: ['MBTI', '16 SOULS'], ennea: ['Enneagram', '9 SOULS'] };
-            // rolodex: the front card tips forward on its bottom hinge as the fan sinks; the next card is revealed behind it
-            const ang = this.postSwap ? 90 + 90 * c01(prog * 2 - 1) : 180 * prog;
-            const rev = this.postSwap ? 1 : c01((ang - 30) / 60);
-            return {
-              plO: o.toFixed(3), plBl: (8 * (1 - o)).toFixed(2),
-              frName: NM[from][0], frSub: NM[from][1], frR: (-ang).toFixed(2), frO: (1 - c01((ang - 35) / 50)).toFixed(3), frBl: (10 * c01((ang - 15) / 70)).toFixed(2),
-              bkName: NM[to][0], bkSub: NM[to][1], bkY: (-10 * (1 - rev)).toFixed(2), bkS: (0.9 + 0.1 * rev).toFixed(4), bkO: rev.toFixed(3), bkBl: (10 * (1 - rev)).toFixed(2)
-            };
-          })(),
-          plHint: armed || this.swapPending ? 'RELEASE TO SWITCH' : 'PULL DOWN TO SWITCH', plHintO: p.gs ? 1 : 0,
-        };
-      })(),
-      navShift: hud ? 300 : 0,
-      hudOp: hud ? 1 : 0, hudX: hud ? 0 : 24, hudPe: hud ? 'auto' : 'none', hudLabel: hud ? 'Hide tuning' : 'Tune',
-      toggleHud: (e) => { e.stopPropagation(); this.setState({ hud: !hud }); },
-      soundOn: sound ? 'true' : 'false', swBg: sound ? '#34C759' : 'rgba(0,0,0,0.16)', knobX: sound ? 14 : 2,
-      toggleSound: () => this.setState({ sound: !sound }),
-      copyLabel: Date.now() - copied < 1400 ? 'Copied' : 'Copy values',
-      copy: () => {
-        try { navigator.clipboard.writeText(JSON.stringify(this.state.cfg, null, 2)); } catch (e) {}
-        this.setState({ copied: Date.now() });
-        clearTimeout(this.ct); this.ct = setTimeout(() => this.forceUpdate(), 1500);
-      },
-      replay: () => { p.pos = p.target - 4; p.v = 0; this.dirty = true; },
+      st: f.st, pill: f.pillAttr,
+      cards: this.SOULS.map((s, i) => ({ s, label: s.name, click: () => this.cardClick(i) })),
+      cur: this.SOULS[f.active],
+      faces: FACES,
+      frName: NM[f.from][0], frSub: NM[f.from][1], bkName: NM[f.to][0], bkSub: NM[f.to][1], plHint: f.plHint,
+      counter: String((f.active % this.DECKS[deck].length) + 1).padStart(2, '0') + ' / ' + this.DECKS[deck].length,
+      tgX: 720 - (112 + 148 + 6) / 2,
+      isMbti: deck === 'mbti' ? 'true' : 'false', isEnnea: deck === 'ennea' ? 'true' : 'false',
+      pickMbti: pickDeck('mbti'), pickEnnea: pickDeck('ennea'),
+      faceRef: (i) => (el) => { this.faceEls[i] = el; },
+      markRef: (i) => (el) => { this.markEls[i] = el; },
       stop: (e) => e.stopPropagation(),
       close: () => { if (performance.now() - (this.gEnd || 0) < 350) return; this.setState({ open: false }); },
-      toggleOpen: () => this.setState({ open: !open }),
-      openLabel: open ? 'Close card' : 'Open card',
       prev: () => { p.target = Math.round(p.target) - 1; this.dirty = true; },
       next: () => { p.target = Math.round(p.target) + 1; this.dirty = true; },
+      wake: () => this.wake(),
       down: (e) => {
         this.lastInput = performance.now();
+        this.wake();
         if (open) {
           if (this.openB && p.col > 0.9) p.gd = { x0: e.clientX, y0: e.clientY, ly: e.clientY, lt: performance.now(), vel: 0, prog: 0, on: false };
           return;
@@ -572,11 +531,12 @@ export default class Landing extends DCLogic {
         p.drag = { x: e.clientX, y: e.clientY, pos: p.pos, lx: e.clientX, lt: performance.now(), vel: 0, axis: null };
         p.moved = 0; p.v = 0;
       },
-      leave: () => { this.mx = null; this.my = null; upFn(); },
+      leave: () => { this.mx = null; this.my = null; this.lastMove = performance.now(); this.wake(); upFn(); },
       move: (e) => {
-        this.mx = e.clientX; this.my = e.clientY;
-        if (open && this.rootEl && this.pillPos) {
-          const rr = this.rootEl.getBoundingClientRect(), sc = 1440 / rr.width;
+        this.mx = e.clientX; this.my = e.clientY; this.mxMoved = true; this.lastMove = performance.now();
+        this.wake();
+        if (open && this.els.root && this.pillPos) {
+          const rr = this.els.root.getBoundingClientRect(), sc = 1440 / rr.width;
           const ax = (e.clientX - rr.left) * sc, ay = (e.clientY - rr.top) * sc;
           const hov = Math.abs(ax - this.pillPos.x) < 70 && Math.abs(ay - this.pillPos.y) < 26;
           if (hov !== !!this.pillHover) { this.pillHover = hov; this.dirty = true; }
@@ -588,7 +548,7 @@ export default class Landing extends DCLogic {
             if (dy > 0 && dy > dx) { g.on = true; g.y0 = e.clientY - 6; g.ly = e.clientY; g.lt = performance.now(); }
             else { p.gd = null; return; }
           }
-          const rr = this.rootEl ? this.rootEl.getBoundingClientRect() : { width: 1440 };
+          const rr = this.els.root ? this.els.root.getBoundingClientRect() : { width: 1440 };
           const sc = 1440 / rr.width;
           const tnow = performance.now(), gdt = Math.max(1, tnow - g.lt) / 1000;
           const raw = (e.clientY - g.y0) * sc;
@@ -602,7 +562,7 @@ export default class Landing extends DCLogic {
           return;
         }
         if (p.gs) {
-          const rr = this.rootEl ? this.rootEl.getBoundingClientRect() : { width: 1440 };
+          const rr = this.els.root ? this.els.root.getBoundingClientRect() : { width: 1440 };
           const sc = 1440 / rr.width, SPAN = 1133;
           const tnow = performance.now(), gdt = Math.max(1, tnow - p.gs.lt) / 1000;
           const raw = (e.clientY - p.gs.y0) * sc;
@@ -614,7 +574,7 @@ export default class Landing extends DCLogic {
           return;
         }
         if (p.gy) {
-          const rr = this.rootEl ? this.rootEl.getBoundingClientRect() : { width: 1440 };
+          const rr = this.els.root ? this.els.root.getBoundingClientRect() : { width: 1440 };
           const sc = 1440 / rr.width, SPAN = 300;
           const tnow = performance.now(), gdt = Math.max(1, tnow - p.gy.lt) / 1000;
           let prog = (p.gy.y0 - e.clientY) * sc / SPAN;
@@ -655,17 +615,22 @@ export default class Landing extends DCLogic {
         p.drag.lx = e.clientX; p.drag.lt = now;
         p.pos = p.drag.pos - dx / cfg.dragPx;
       },
-      up: () => upFn(),
+      up: () => { this.wake(); upFn(); },
       wheel: (e) => {
         this.lastInput = performance.now();
-        if (open) return;
-        p.target += (e.deltaY + e.deltaX) / cfg.wheelPx;
+        // a trackpad pinch arrives as ctrl+wheel: that's a zoom, not a spin
+        if (open || e.ctrlKey) return;
+        // Firefox can report whole lines or pages instead of pixels
+        const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 900 : 1;
+        p.target += (e.deltaY + e.deltaX) * unit / cfg.wheelPx;
         this.dirty = true;
+        this.wake();
         clearTimeout(this.wt);
-        this.wt = setTimeout(() => { p.target = Math.round(p.target); this.dirty = true; }, cfg.snapMs);
+        this.wt = setTimeout(() => { p.target = Math.round(p.target); this.dirty = true; this.wake(); }, cfg.snapMs);
       },
       key: (e) => {
         this.lastInput = performance.now();
+        this.wake();
         if (e.key === 'ArrowRight') { p.target = Math.round(p.target) + 1; this.dirty = true; }
         else if (e.key === 'ArrowLeft') { p.target = Math.round(p.target) - 1; this.dirty = true; }
         else if (e.key === 'Enter' && !open) this.setState({ open: true });
@@ -676,7 +641,7 @@ export default class Landing extends DCLogic {
 
   template(v) {
     return (
-    <div className="wheel" ref={v.rootRef} tabIndex="0" onPointerDown={v.down} onPointerMove={v.move} onPointerUp={v.up} onPointerLeave={v.leave} onWheel={v.wheel} onKeyDown={v.key} style={{ "width": "1440px", "height": "900px", "position": "relative", "clipPath": "inset(calc(var(--exty, 0) * -1px) calc(var(--ext, 0) * -1px))", "background": "#F4F0E8" }}>
+    <div className="wheel" ref={this.R('root')} tabIndex="0" onPointerDown={v.down} onPointerMove={v.move} onPointerUp={v.up} onPointerLeave={v.leave} onWheel={v.wheel} onKeyDown={v.key} onClick={v.wake} style={{ "width": "1440px", "height": "900px", "position": "relative", "clipPath": "inset(calc(var(--exty, 0) * -1px) calc(var(--ext, 0) * -1px))", "background": "#F4F0E8" }}>
       <nav style={{ "position": "absolute", "left": "0", "top": "0", "width": "1440px", "boxSizing": "border-box", "padding": "28px 56px", "display": "flex", "justifyContent": "space-between", "alignItems": "center", "zIndex": "200" }}>
         <a href="#" aria-label="giveitasoul home" style={{ "position": "relative", "display": "flex", "alignItems": "baseline", "fontFamily": "'Instrument Serif', Georgia, serif", "fontSize": "28px", "letterSpacing": "-0.03em", "textDecoration": "none", "color": "#141210" }}>
           {"give"}
@@ -688,7 +653,7 @@ export default class Landing extends DCLogic {
           </span>
           {"asoul"}
         </a>
-        <div style={{ "display": "flex", "gap": "28px", "fontSize": "15px", "marginRight": `${v.navShift}px` }}>
+        <div style={{ "display": "flex", "gap": "28px", "fontSize": "15px" }}>
           <a href="#" style={{ "textDecoration": "none", "padding": "12px 0" }}>
             {"Browse souls"}
           </a>
@@ -697,20 +662,18 @@ export default class Landing extends DCLogic {
           </a>
         </div>
       </nav>
-      <div style={{ "position": "absolute", "left": "0px", "top": "156px", "width": "1440px", "display": "flex", "flexDirection": "column", "alignItems": "center", "gap": "14px", "textAlign": "center", "opacity": v.heroOp, "transform": `translateY(${v.heroY}px)`, "pointerEvents": "none" }}>
+      <div ref={this.R('hero')} style={{ "position": "absolute", "left": "0px", "top": "156px", "width": "1440px", "display": "flex", "flexDirection": "column", "alignItems": "center", "gap": "14px", "textAlign": "center", "pointerEvents": "none", ...v.st.hero }}>
         <h1 style={{ "margin": "0", "fontFamily": "'Instrument Serif', Georgia, serif", "fontWeight": "400", "fontSize": "72px", "lineHeight": "1", "letterSpacing": "-0.03em" }}>
           <span>
             {"Give your AI agents a"}
           </span>
           {" "}
-          <span ref={v.soulRef} style={{ "position": "relative", "display": "inline-block", "width": `${v.soulW}px`, "height": "0.72em", "verticalAlign": "baseline" }}>
-            {(v.soulFaces || []).map((sf, _i0) => (
-              <React.Fragment key={_i0}>
-                <span ref={sf.ref} style={{ "position": "absolute", "left": "0", "bottom": `${sf.bo}px`, "fontFamily": sf.ff, "fontStyle": sf.st, "fontWeight": sf.w, "fontSize": `${sf.fs}em`, "letterSpacing": `${sf.ls}em`, "lineHeight": "1", "whiteSpace": "nowrap", "color": v.soulColor, "opacity": sf.op, "transformOrigin": `0 ${sf.oy}px`, "transform": `scale(${sf.sc})` }}>
-                  {"soul"}
-                  <i ref={sf.mref} style={{ "display": "inline-block", "width": "0", "height": "0" }} />
-                </span>
-              </React.Fragment>
+          <span ref={this.R('soul')} style={{ "position": "relative", "display": "inline-block", "height": "0.72em", "verticalAlign": "baseline", ...v.st.soul }}>
+            {v.faces.map((sf, i) => (
+              <span key={i} ref={(el) => { this.R('face' + i)(el); v.faceRef(i)(el); }} style={{ "position": "absolute", "left": "0", "fontFamily": sf.ff, "fontStyle": sf.st, "fontWeight": sf.w, "fontSize": `${sf.fs}em`, "letterSpacing": `${sf.ls}em`, "lineHeight": "1", "whiteSpace": "nowrap", ...v.st['face' + i] }}>
+                {"soul"}
+                <i ref={v.markRef(i)} style={{ "display": "inline-block", "width": "0", "height": "0" }} />
+              </span>
             ))}
           </span>
           <span>
@@ -721,27 +684,27 @@ export default class Landing extends DCLogic {
           {"Spin through personalities. Tap one to meet it."}
         </p>
       </div>
-      <div role="radiogroup" aria-label="Personality system" onPointerDown={v.stop} style={{ "position": "absolute", "left": `${v.tgX}px`, "top": "32px", "height": "36px", "padding": "3px", "boxSizing": "border-box", "borderRadius": "99px", "background": "rgba(20,18,16,0.07)", "display": "flex", "zIndex": "210", "opacity": v.tgO, "pointerEvents": v.tgPe }}>
-        <span style={{ "position": "absolute", "left": `${v.thX}px`, "top": "3px", "width": `${v.thW}px`, "height": "30px", "borderRadius": "99px", "background": "#FFFFFF", "boxShadow": "0 1px 2px rgba(20,18,16,0.14), 0 3px 10px -2px rgba(20,18,16,0.12), 0 0 0 0.5px rgba(20,18,16,0.06)" }} />
-        <button type="button" role="radio" aria-checked={v.isMbti} onClick={v.pickMbti} style={{ "all": "unset", "position": "relative", "width": "112px", "height": "30px", "display": "flex", "alignItems": "center", "justifyContent": "center", "gap": "7px", "cursor": "pointer", "fontSize": "14px", "fontWeight": "500", "color": v.tc0 }}>
+      <div ref={this.R('toggle')} role="radiogroup" aria-label="Personality system" onPointerDown={v.stop} style={{ "position": "absolute", "left": `${v.tgX}px`, "top": "32px", "height": "36px", "padding": "3px", "boxSizing": "border-box", "borderRadius": "99px", "background": "rgba(20,18,16,0.07)", "display": "flex", "zIndex": "210", ...v.st.toggle }}>
+        <span ref={this.R('thumb')} style={{ "position": "absolute", "top": "3px", "height": "30px", "borderRadius": "99px", "background": "#FFFFFF", "boxShadow": "0 1px 2px rgba(20,18,16,0.14), 0 3px 10px -2px rgba(20,18,16,0.12), 0 0 0 0.5px rgba(20,18,16,0.06)", ...v.st.thumb }} />
+        <button ref={this.R('opt0')} type="button" role="radio" aria-checked={v.isMbti} onClick={v.pickMbti} style={{ "all": "unset", "position": "relative", "width": "112px", "height": "30px", "display": "flex", "alignItems": "center", "justifyContent": "center", "gap": "7px", "cursor": "pointer", "fontSize": "14px", "fontWeight": "500", ...v.st.opt0 }}>
           {"MBTI "}
           <span style={{ "fontFamily": "'Geist Mono', monospace", "fontSize": "11px", "fontWeight": "400", "opacity": "0.6" }}>
             {"16"}
           </span>
         </button>
-        <button type="button" role="radio" aria-checked={v.isEnnea} onClick={v.pickEnnea} style={{ "all": "unset", "position": "relative", "width": "148px", "height": "30px", "display": "flex", "alignItems": "center", "justifyContent": "center", "gap": "7px", "cursor": "pointer", "fontSize": "14px", "fontWeight": "500", "color": v.tc1 }}>
+        <button ref={this.R('opt1')} type="button" role="radio" aria-checked={v.isEnnea} onClick={v.pickEnnea} style={{ "all": "unset", "position": "relative", "width": "148px", "height": "30px", "display": "flex", "alignItems": "center", "justifyContent": "center", "gap": "7px", "cursor": "pointer", "fontSize": "14px", "fontWeight": "500", ...v.st.opt1 }}>
           {"Enneagram "}
           <span style={{ "fontFamily": "'Geist Mono', monospace", "fontSize": "11px", "fontWeight": "400", "opacity": "0.6" }}>
             {"9"}
           </span>
         </button>
       </div>
-      <div style={{ "position": "absolute", "left": "0", "top": "470px", "width": "1440px", "display": "flex", "flexDirection": "column", "alignItems": "center", "pointerEvents": "none", "opacity": v.plO, "filter": `blur(${v.plBl}px)`, "zIndex": "90" }}>
-        <span style={{ "fontFamily": "'Geist Mono', monospace", "fontSize": "12px", "lineHeight": "16px", "letterSpacing": "0.08em", "color": "#6B6358", "opacity": v.plHintO }}>
+      <div ref={this.R('flip')} style={{ "position": "absolute", "left": "0", "top": "470px", "width": "1440px", "display": "flex", "flexDirection": "column", "alignItems": "center", "pointerEvents": "none", "zIndex": "90", ...v.st.flip }}>
+        <span ref={this.R('hint')} style={{ "fontFamily": "'Geist Mono', monospace", "fontSize": "12px", "lineHeight": "16px", "letterSpacing": "0.08em", "color": "#6B6358", ...v.st.hint }}>
           {v.plHint}
         </span>
         <div style={{ "position": "relative", "marginTop": "14px", "width": "360px", "height": "104px", "perspective": "700px" }}>
-          <div style={{ "position": "absolute", "left": "0", "top": "0", "width": "360px", "height": "96px", "display": "flex", "flexDirection": "column", "alignItems": "center", "justifyContent": "center", "gap": "6px", "transformOrigin": "50% 100%", "transform": `translateY(${v.bkY}px) scale(${v.bkS})`, "opacity": v.bkO, "filter": `blur(${v.bkBl}px)` }}>
+          <div ref={this.R('back')} style={{ "position": "absolute", "left": "0", "top": "0", "width": "360px", "height": "96px", "display": "flex", "flexDirection": "column", "alignItems": "center", "justifyContent": "center", "gap": "6px", "transformOrigin": "50% 100%", ...v.st.back }}>
             <span style={{ "fontFamily": "'Geist Mono', monospace", "fontSize": "12px", "lineHeight": "16px", "letterSpacing": "0.08em", "color": "#6B6358" }}>
               {v.bkSub}
             </span>
@@ -749,7 +712,7 @@ export default class Landing extends DCLogic {
               {v.bkName}
             </span>
           </div>
-          <div style={{ "position": "absolute", "left": "0", "top": "0", "width": "360px", "height": "96px", "display": "flex", "flexDirection": "column", "alignItems": "center", "justifyContent": "center", "gap": "6px", "transformOrigin": "50% 100%", "transform": `rotateX(${v.frR}deg)`, "backfaceVisibility": "hidden", "WebkitBackfaceVisibility": "hidden", "opacity": v.frO, "filter": `blur(${v.frBl}px)` }}>
+          <div ref={this.R('front')} style={{ "position": "absolute", "left": "0", "top": "0", "width": "360px", "height": "96px", "display": "flex", "flexDirection": "column", "alignItems": "center", "justifyContent": "center", "gap": "6px", "transformOrigin": "50% 100%", "backfaceVisibility": "hidden", "WebkitBackfaceVisibility": "hidden", ...v.st.front }}>
             <span style={{ "fontFamily": "'Geist Mono', monospace", "fontSize": "12px", "lineHeight": "16px", "letterSpacing": "0.08em", "color": "#6B6358" }}>
               {v.frSub}
             </span>
@@ -759,46 +722,42 @@ export default class Landing extends DCLogic {
           </div>
         </div>
       </div>
-      {(v.cards || []).map((c, _i1) => (
-        <React.Fragment key={_i1}>
-          <div style={{ "position": "absolute", "left": "0", "top": "0", "width": "232px", "height": "324px", "borderRadius": "20px", "transform": `translate(${c.x}px, ${c.y}px) rotate(${c.a}deg) perspective(1400px) rotateY(${c.ry}deg) scale(${c.sc})`, "opacity": c.op, "zIndex": c.z, "filter": `brightness(${c.br})`, "boxShadow": c.sh, "willChange": "transform" }}>
-            <button type="button" className="slotbtn" aria-label={c.label} onClick={c.click}>
-              <SoulCard s={c.s} />
-            </button>
-          </div>
-        </React.Fragment>
+      {v.cards.map((c, i) => (
+        <div key={i} ref={this.R('card' + i)} style={{ "position": "absolute", "left": "0", "top": "0", "width": "232px", "height": "324px", "borderRadius": "20px", "willChange": "transform", ...v.st['card' + i] }}>
+          <button type="button" className="slotbtn" aria-label={c.label} onClick={c.click}>
+            <SoulCard s={c.s} />
+          </button>
+        </div>
       ))}
-      <span onClick={v.close} style={{ "position": "absolute", "left": "calc(var(--ext, 0) * -1px)", "top": "calc(var(--exty, 0) * -1px)", "width": "calc(1440px + var(--ext, 0) * 2px)", "height": "calc(900px + var(--exty, 0) * 2px)", "zIndex": "140", "background": `rgba(244,240,232,${v.scrimA})`, "backdropFilter": `blur(${v.scrimBlur}px)`, "WebkitBackdropFilter": `blur(${v.scrimBlur}px)`, "pointerEvents": v.panelPe, "visibility": v.sheetVis }} />
+      <span ref={this.R('scrim')} onClick={v.close} style={{ "position": "absolute", "left": "calc(var(--ext, 0) * -1px)", "top": "calc(var(--exty, 0) * -1px)", "width": "calc(1440px + var(--ext, 0) * 2px)", "height": "calc(900px + var(--exty, 0) * 2px)", "zIndex": "140", ...v.st.scrim }} />
       <svg width="1440" height="900" viewBox="0 0 1440 900" fill="none" style={{ "position": "absolute", "left": "0", "top": "0", "zIndex": "160", "pointerEvents": "none" }}>
-        <path d={v.pillD} stroke="#141210" strokeOpacity={v.pillO} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+        <path ref={this.R('pill')} d={v.pill.d} stroke="#141210" strokeOpacity={v.pill['stroke-opacity']} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <div role="dialog" aria-label={v.cur.name} style={{ "position": "absolute", "left": "0", "top": "0", "zIndex": "150", "visibility": v.sheetVis, "width": `${v.shW}px`, "height": `${v.shH}px`, "transform": `translate(${v.shX}px, ${v.shY}px) rotate(${v.shA}deg) scale(${v.shSx}, ${v.shSy2})`, "borderRadius": `${v.shR}px`, "background": `rgba(251,248,241,${v.shBgA})`, "overflow": "hidden", "boxShadow": `0 ${v.shSy}px ${v.shSb}px -24px rgba(20,18,16,${v.shSa}), 0 0 0 0.5px rgba(20,18,16,${v.shBorder})`, "pointerEvents": v.panelPe }}>
-        <div style={{ "position": "absolute", "left": `${v.artX}px`, "top": `${v.artY}px`, "width": "232px", "height": "324px", "transformOrigin": "0 0", "transform": `scale(${v.artS})`, "borderRadius": "20px", "overflow": "hidden", "boxShadow": `0 18px 40px -22px rgba(20,18,16,${v.artSh})` }}>
+      <div ref={this.R('sheet')} role="dialog" aria-label={v.cur.name} style={{ "position": "absolute", "left": "0", "top": "0", "zIndex": "150", "background": "rgba(251,248,241,1)", "overflow": "hidden", ...v.st.sheet }}>
+        <div ref={this.R('art')} style={{ "position": "absolute", "width": "232px", "height": "324px", "transformOrigin": "0 0", "borderRadius": "20px", "overflow": "hidden", ...v.st.art }}>
           <SoulCard s={v.cur} />
         </div>
-        <div ref={v.detRef} style={{ "position": "absolute", "left": `${v.detX}px`, "top": `${v.detY}px`, "width": "400px", "display": "flex", "flexDirection": "column" }}>
-          <span style={{ "fontFamily": "'Geist Mono', monospace", "fontSize": "12px", "lineHeight": "16px", "color": "#6B6358", "letterSpacing": "0.06em", "opacity": v.q0, "transform": `translateY(${v.y0}px)`, "filter": `blur(${v.b0}px)` }}>
+        <div ref={this.R('det')} style={{ "position": "absolute", "width": "400px", "display": "flex", "flexDirection": "column", ...v.st.det }}>
+          <span ref={this.R('d0')} style={{ "fontFamily": "'Geist Mono', monospace", "fontSize": "12px", "lineHeight": "16px", "color": "#6B6358", "letterSpacing": "0.06em", ...v.st.d0 }}>
             {`${v.cur.anchor} · ${v.cur.weight}`}
           </span>
-          <span style={{ "marginTop": "8px", "fontFamily": "'Instrument Serif', Georgia, serif", "fontSize": "44px", "lineHeight": "48px", "letterSpacing": "-0.02em", "opacity": v.q1, "transform": `translateY(${v.y1}px)`, "filter": `blur(${v.b1}px)` }}>
+          <span ref={this.R('d1')} style={{ "marginTop": "8px", "fontFamily": "'Instrument Serif', Georgia, serif", "fontSize": "44px", "lineHeight": "48px", "letterSpacing": "-0.02em", ...v.st.d1 }}>
             {v.cur.name}
           </span>
-          <span style={{ "marginTop": "12px", "fontFamily": "'Instrument Serif', Georgia, serif", "fontStyle": "italic", "fontSize": "20px", "lineHeight": "28px", "color": "#3A342C", "textWrap": "pretty", "opacity": v.q2, "transform": `translateY(${v.y2}px)`, "filter": `blur(${v.b2}px)` }}>
+          <span ref={this.R('d2')} style={{ "marginTop": "12px", "fontFamily": "'Instrument Serif', Georgia, serif", "fontStyle": "italic", "fontSize": "20px", "lineHeight": "28px", "color": "#3A342C", "textWrap": "pretty", ...v.st.d2 }}>
             {v.cur.says}
           </span>
-          <div style={{ "marginTop": "24px", "display": "flex", "flexDirection": "column", "gap": "8px", "borderTop": "1px solid #E4DCCB", "paddingTop": "16px", "opacity": v.q3, "transform": `translateY(${v.y3}px)`, "filter": `blur(${v.b3}px)` }}>
+          <div ref={this.R('d3')} style={{ "marginTop": "24px", "display": "flex", "flexDirection": "column", "gap": "8px", "borderTop": "1px solid #E4DCCB", "paddingTop": "16px", ...v.st.d3 }}>
             <span style={{ "fontSize": "12px", "lineHeight": "16px", "color": "#6B6358" }}>
               {"In moments, it will…"}
             </span>
-            {(v.cur.moments || []).map((m, _i2) => (
-              <React.Fragment key={_i2}>
-                <span style={{ "fontSize": "15px", "lineHeight": "22px" }}>
-                  {`— ${m}`}
-                </span>
-              </React.Fragment>
+            {(v.cur.moments || []).map((m, i) => (
+              <span key={i} style={{ "fontSize": "15px", "lineHeight": "22px" }}>
+                {`— ${m}`}
+              </span>
             ))}
           </div>
-          <div style={{ "marginTop": "32px", "display": "flex", "gap": "8px", "opacity": v.q4, "transform": `translateY(${v.y4}px)`, "filter": `blur(${v.b4}px)` }}>
+          <div ref={this.R('d4')} style={{ "marginTop": "32px", "display": "flex", "gap": "8px", ...v.st.d4 }}>
             <a href="#" style={{ "height": "44px", "padding": "0 20px", "borderRadius": "99px", "background": "#141210", "color": "#F4F0E8", "textDecoration": "none", "display": "flex", "alignItems": "center", "fontSize": "15px", "fontWeight": "500" }}>
               {"Use this soul"}
             </a>
@@ -807,7 +766,7 @@ export default class Landing extends DCLogic {
             </button>
           </div>
         </div>
-        <button type="button" aria-label="Close" onClick={v.close} style={{ "position": "absolute", "right": "16px", "top": "16px", "width": "32px", "height": "32px", "borderRadius": "50%", "border": "none", "background": "rgba(20,18,16,0.06)", "cursor": "pointer", "display": "flex", "alignItems": "center", "justifyContent": "center", "opacity": v.q0 }}>
+        <button ref={this.R('closeBtn')} type="button" aria-label="Close" onClick={v.close} style={{ "position": "absolute", "right": "16px", "top": "16px", "width": "32px", "height": "32px", "borderRadius": "50%", "border": "none", "background": "rgba(20,18,16,0.06)", "cursor": "pointer", "display": "flex", "alignItems": "center", "justifyContent": "center", ...v.st.closeBtn }}>
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#141210" strokeWidth="1.6" strokeLinecap="round">
             <path d="M2 2l8 8M10 2L2 10" />
           </svg>
@@ -815,7 +774,7 @@ export default class Landing extends DCLogic {
       </div>
       <div style={{ "position": "absolute", "left": "calc(var(--ext, 0) * -1px)", "top": "calc(var(--exty, 0) * -1px)", "width": "280px", "height": "calc(900px + var(--exty, 0) * 2px)", "background": "linear-gradient(90deg, rgba(244,240,232,0.92) 0%, rgba(244,240,232,0.8) 14%, rgba(244,240,232,0.58) 32%, rgba(244,240,232,0.34) 52%, rgba(244,240,232,0.13) 74%, rgba(244,240,232,0) 100%)", "zIndex": "125", "pointerEvents": "none" }} />
       <div style={{ "position": "absolute", "right": "calc(var(--ext, 0) * -1px)", "top": "calc(var(--exty, 0) * -1px)", "width": "280px", "height": "calc(900px + var(--exty, 0) * 2px)", "background": "linear-gradient(270deg, rgba(244,240,232,0.92) 0%, rgba(244,240,232,0.8) 14%, rgba(244,240,232,0.58) 32%, rgba(244,240,232,0.34) 52%, rgba(244,240,232,0.13) 74%, rgba(244,240,232,0) 100%)", "zIndex": "125", "pointerEvents": "none" }} />
-      <div style={{ "position": "absolute", "left": "0", "bottom": "34px", "width": "1440px", "display": "flex", "justifyContent": "center", "alignItems": "center", "gap": "16px", "opacity": v.heroOp, "zIndex": "200" }}>
+      <div ref={this.R('bar')} style={{ "position": "absolute", "left": "0", "bottom": "34px", "width": "1440px", "display": "flex", "justifyContent": "center", "alignItems": "center", "gap": "16px", "zIndex": "200", ...v.st.bar }}>
         <button type="button" aria-label="Previous soul" onClick={v.prev} style={{ "width": "44px", "height": "44px", "borderRadius": "50%", "border": "1.5px solid #CFC6B6", "background": "#F4F0E8", "cursor": "pointer", "display": "flex", "alignItems": "center", "justifyContent": "center" }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#141210" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 6l-6 6 6 6" />

@@ -11,6 +11,7 @@ Built with [Astro](https://astro.build) and one React island (`src/components/la
 - **Close:** pull the window down by its pill (or anywhere on it), tap outside, or press Esc.
 - **Switch deck:** use the MBTI / Enneagram toggle, or pull the fan down. The cards drape down on a chain of springs, the deck name flips over, and the other deck rises.
 - **Idle hint:** when nothing has been touched for a while, the centre card lifts a little to suggest swiping up.
+- **Reduced motion:** with the system setting on, the wheel skips its spin-in and idle hint, springs settle without overshoot, the fan doesn't lean, and each card pattern holds still.
 
 The page is designed on a 1440×900 stage and scaled to fit the window. A dedicated phone layout is next.
 
