@@ -1,7 +1,6 @@
 import { DECK_LABELS } from '../config.js';
 
-// The deck name under the fan while switching decks: the old name tips forward like a rolodex card and the new
-// one is revealed behind it.
+// The deck name under the fan while switching decks: the old name rolls up and out as the new one rolls in.
 export function DeckFlip({ engine, st, from, to, hint, L }) {
   const [frName, frSub] = DECK_LABELS[from], [bkName, bkSub] = DECK_LABELS[to];
   return (

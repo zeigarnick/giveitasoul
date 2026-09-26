@@ -30,12 +30,11 @@
 .soulface { position: absolute; left: 0; line-height: 1; white-space: nowrap; }
 .soulmark { display: inline-block; width: 0; height: 0; }
 
-/* deck-switch label: a rolodex card flipping between deck names */
+/* deck-switch label: the old deck name rolls up and out as the new one rolls in */
 .deckflip { position: absolute; left: 0; width: var(--W); display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 90; }
 .deckflip-hint, .deckflip-sub { font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 16px; letter-spacing: 0.08em; color: #6B6358; }
-.deckflip-stage { position: relative; margin-top: 14px; width: 360px; height: 104px; perspective: 700px; }
-.deckflip-card { position: absolute; left: 0; top: 0; width: 360px; height: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transform-origin: 50% 100%; }
-.deckflip-card.is-front { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.deckflip-stage { position: relative; margin-top: 14px; width: 360px; height: 104px; }
+.deckflip-card { position: absolute; left: 0; top: 0; width: 360px; height: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transform-origin: 50% 50%; }
 .deckflip-name { font-family: 'Instrument Serif', Georgia, serif; font-size: 48px; line-height: 52px; letter-spacing: -0.02em; }
 
 /* the fan */

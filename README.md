@@ -9,7 +9,7 @@ Built with [Astro](https://astro.build) and one React island (`src/components/la
 - **The wheel:** spin the fan by dragging, scrolling or ← →. Springs are integrated at 240 Hz; flicks carry momentum.
 - **Open a soul:** tap the centre card, or swipe it up. The card lifts, then the details window unfolds around it.
 - **Close:** pull the window down by its pill (or anywhere on it), tap outside, or press Esc.
-- **Switch deck:** use the MBTI / Enneagram toggle, or pull the fan down. The cards drape down on a chain of springs, the deck name flips over, and the other deck rises.
+- **Switch deck:** use the MBTI / Enneagram toggle, or pull the fan down. The cards drape down a short way on a chain of springs and fade out, the deck name rolls over to the new one, and the other deck rises into place, fading in.
 - **Idle hint:** when nothing has been touched for a while, the centre card lifts a little to suggest swiping up.
 - **Open/close motion:** the details text blends in and shrinks out like Dynamic Island content, with less bounce opening the window and a little more closing it. Other variants (including the original Tuned motion) are in `MOTIONS` in `config.js`; `MOTION` picks one.
 - **Phone:** below 700px wide the page uses a 390×844 artboard (see `LAYOUTS` in `config.js`), with the centre card the size of Interface Craft's (300×420 on a 390×844 phone), and a flick moves one card at a time.

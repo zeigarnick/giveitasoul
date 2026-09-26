@@ -24,6 +24,11 @@ export function frame(e) {
 
 // The fan: each card on a big hidden wheel. When a card opens, the others drop away; when the deck switches,
 // the chain of springs in e.cs drapes them down.
+// deck switch: how far down a sinking card eases to (× the layout's K), and its rate at first (px per unit of
+// sl), which keeps it 1:1 with the finger
+const SINK = 240, SINK_RATE = 680;
+const smooth = (t) => t * t * (3 - 2 * t);
+
 function fanStyles(e, { open, restE, op01, sheetOn }, st) {
   const p = e.p, cfg = e.feel, N = e.souls.length;
   const pos = p.pos;
@@ -32,6 +37,7 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
   const lean = e.rm ? 0 : Math.max(-1, Math.min(1, p.sv / 5)) * cfg.lean;
   const ext = e.ext || 0, exty = e.exty || 0;
   const cardPause = [], cardDist = [];
+  let visible = 0;
   for (let i = 0; i < N; i++) {
     const d = ringOffset(i, pos, N);
     const ad = Math.abs(d);
@@ -55,8 +61,12 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
     const L = (a, b) => a + (b - a) * restE;
     const cst = e.cs && e.cs[i] ? e.cs[i] : { s: 0, v: 0 };
     const sl = Math.max(-0.08, Math.min(1, cst.s / 0.6)), slc = Math.max(0, sl);
-    const x = L(wx, ox) - (wx + CARD_W / 2 - PX) * 0.22 * slc, y = L(wy, oy) + 680 * sl;
-    const op = isActive ? (sheetOn ? 0 : wop) : wop * (1 - op01);
+    // Deck switch: the card sinks with the finger at first, then eases to a stop a short way down as it fades out
+    // (and the new deck rises from there, fading in), rather than dropping off the bottom of the screen.
+    const sinkY = sl > 0 ? SINK * K * (1 - Math.exp(-SINK_RATE * sl / (SINK * K))) : SINK_RATE * sl;
+    const gone = smooth(clamp01((sl - 0.25) / 0.7));
+    const x = L(wx, ox) - (wx + CARD_W / 2 - PX) * 0.22 * slc, y = L(wy, oy) + sinkY;
+    const op = (isActive ? (sheetOn ? 0 : wop) : wop * (1 - op01)) * (1 - gone);
     // Crisp text at rest: once the wheel stops, the centre card drops everything that makes the browser draw it as a
     // stretched bitmap — the GPU layer hint, a flat 3D transform, a no-op filter, half-pixel positions — so its
     // words are drawn at their real size. While moving, it stays on the GPU for smooth motion.
@@ -75,7 +85,10 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
     st['glare' + i] = isActive ? glare(p) : NO_GLARE;
     // off the window, invisible, or under the full-strength scrim
     cardPause[i] = e.rm || op < 0.001 || op01 > 0.98 || x < -300 - ext || x > Lay.W + 20 + ext || y > Lay.H + 20 + exty;
+    if (op > 0.01 && !(x < -300 - ext || x > Lay.W + 20 + ext || y > Lay.H + 20 + exty)) visible++;
   }
+  // how many cards can be seen; the deck switch waits for none
+  e.fanVisible = visible;
   return { active, cardPause, cardDist };
 }
 
@@ -241,8 +254,7 @@ function textStyles(e, open, st) {
   }
 }
 
-// The MBTI/Enneagram toggle and the rolodex flip between deck names, driven by the centre card's own spring:
-// the first half while it sinks, the second half as the new centre lands.
+// The MBTI/Enneagram toggle and the deck name shown while switching decks.
 function deckStyles(e, st) {
   const p = e.p, deck = e.deck, open = e.open;
   const other = deck === 'mbti' ? 'ennea' : 'mbti';
@@ -251,19 +263,17 @@ function deckStyles(e, st) {
   st.thumb = { left: (3 + W0 * t).toFixed(1) + 'px', width: (W0 + (W1 - W0) * t).toFixed(1) + 'px' };
   st.opt0 = { color: t < 0.5 ? '#141210' : '#6B6358' };
   st.opt1 = { color: t >= 0.5 ? '#141210' : '#6B6358' };
-  const cc = e.cs && e.cs[e.centreI] ? e.cs[e.centreI] : { s: 0, v: 0 };
-  const cl = cc.s / 0.6;
-  let prog, o;
-  if (!e.postSwap) { prog = 0.5 * Math.min(1.08, Math.max(0, cl)); o = clamp01(cl * 3); }
-  else { const r = 1 - Math.min(1, cl); prog = 0.5 + 0.5 * r; o = 1 - clamp01((r - 0.8) / 0.2); }
+  // The deck name shows in the space the fan leaves: it fades in as the fan sinks and out as the new deck rises
+  // over it. Once a switch is committed the name rolls over on its own spring (p.lab): the old name lifts away and
+  // blurs out while the new one rises into place, like the details text.
+  const sk = clamp01(p.sink || 0);
+  const o = e.postSwap ? smooth(clamp01((sk - 0.1) / 0.5)) : smooth(clamp01(sk / 0.18));
   const from = e.postSwap ? other : deck, to = e.postSwap ? deck : other;
-  // the front card tips forward on its bottom hinge as the fan sinks; the next card is revealed behind it
-  const ang = e.postSwap ? 90 + 90 * clamp01(prog * 2 - 1) : 180 * prog;
-  const rev = e.postSwap ? 1 : clamp01((ang - 30) / 60);
-  st.flip = { opacity: o.toFixed(3), filter: 'blur(' + (8 * (1 - o)).toFixed(2) + 'px)' };
+  const l = p.lab || 0, lc = clamp01(l);
+  st.flip = { opacity: o.toFixed(3) };
   st.hint = { opacity: p.gs ? 1 : 0 };
-  st.back = { transform: 'translateY(' + (-10 * (1 - rev)).toFixed(2) + 'px) scale(' + (0.9 + 0.1 * rev).toFixed(4) + ')', opacity: rev.toFixed(3), filter: 'blur(' + (10 * (1 - rev)).toFixed(2) + 'px)' };
-  st.front = { transform: 'rotateX(' + (-ang).toFixed(2) + 'deg)', opacity: (1 - clamp01((ang - 35) / 50)).toFixed(3), filter: 'blur(' + (10 * clamp01((ang - 15) / 70)).toFixed(2) + 'px)' };
+  st.front = { transform: 'translateY(' + (-18 * l).toFixed(2) + 'px) scale(' + (1 - 0.06 * lc).toFixed(4) + ')', opacity: (1 - lc).toFixed(3), filter: blurCss(6 * lc) };
+  st.back = { transform: 'translateY(' + (18 * (1 - l)).toFixed(2) + 'px) scale(' + (0.94 + 0.06 * lc).toFixed(4) + ')', opacity: lc.toFixed(3), filter: blurCss(6 * (1 - lc)) };
   const plHint = (p.sink || 0) > 0.14 || e.swapPending ? 'RELEASE TO SWITCH' : 'PULL DOWN TO SWITCH';
   return { from, to, plHint };
 }

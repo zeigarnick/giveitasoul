@@ -6,6 +6,8 @@ import { createWriter } from './writer.js';
 import { renderer } from '../shaders/renderer.js';
 
 const DECKS = { mbti: MBTI, ennea: ENNEAGRAM };
+// ms the fan stays down after a deck switch before the new deck rises
+const SWAP_HOLD = 300;
 // a 9-card deck is laid out twice round the ring so the fan runs to the screen edges like the 16-card one
 const ring = (deck) => (DECKS[deck].length < 16 ? DECKS[deck].concat(DECKS[deck]) : DECKS[deck]);
 
@@ -182,16 +184,24 @@ export class WheelEngine {
     // deck swap: p.sink 0..1 sinks the fan; at the bottom the deck changes and it rises again
     if (p.sink == null) { p.sink = 0; p.sinkv = 0; p.sinkT = 0; p.tog = 0; p.togv = 0; }
     const curIdx = this.deck === 'mbti' ? 0 : 1;
-    if (this.swapPending && p.sink > 0.9 && this.cs && this.cs.every((c) => c.s > 0.62)) {
+    // swap as soon as no old card can be seen (they fade as they sink, see frame.js), not once they've all come to rest
+    if (this.swapPending && p.sink > 0.75 && this.cs && this.fanVisible === 0) {
       this.deck = this.deck === 'mbti' ? 'ennea' : 'mbti';
       this.souls = ring(this.deck); this.fv = null;
       this.cs = this.souls.map(() => ({ s: 1, v: 0 })); p.sink = 1;
-      p.pos = -1.5; p.target = 0; p.v = 0;
-      p.sinkT = 0; p.sinkv = 0; this.swapPending = false; this.swapAt = now; this.postSwap = true;
+      // the new deck arrives with a short spin, not a long one: it rises from close by (see frame.js)
+      p.pos = -0.6; p.target = 0; p.v = 0;
+      // hold a beat with the fan down before the new deck rises, so the new deck's name can be read
+      p.sinkv = 0; this.riseAt = now + SWAP_HOLD; this.swapPending = false; this.swapAt = now; this.postSwap = true;
       this.emit();
     }
+    if (this.riseAt && now >= this.riseAt) { this.riseAt = 0; p.sinkT = 0; }
     const togT = this.swapPending ? 1 - curIdx : curIdx; // flips once the switch is committed, on its own spring
     const sinkS = p.sinkT ? springK(0.4, 0.95) : springK(0.62, 0.84), togS = springK(0.32, 0.86);
+    // the deck name under the fan rolls from the old name to the new one once a committed switch is halfway down, so
+    // the new name lands as the old deck fades and the new one rises over it; it resets unseen once the switch is over
+    if (p.lab == null || (!this.swapPending && !this.postSwap)) { p.lab = 0; p.labv = 0; }
+    const labT = (this.swapPending && p.sink > 0.45) || this.postSwap ? 1 : 0, labS = springK(0.5, rm ? 1 : 0.78);
 
     for (let i = 0; i < n; i++) {
       if (!gOn && open) stepSpring(p, 'dy', 'dyv', 0, dragS, h);
@@ -201,6 +211,7 @@ export class WheelEngine {
       stepSpring(p, 'pill', 'pillv', pillT, pillS, h);
       if (!p.gs) stepSpring(p, 'sink', 'sinkv', p.sinkT, sinkS, h);
       stepSpring(p, 'tog', 'togv', togT, togS, h);
+      stepSpring(p, 'lab', 'labv', labT, labS, h);
       if (!p.drag) stepSpring(p, 'pos', 'v', p.target, wheelS, h);
       if (!p.gy && !gOn) {
         stepSpring(p, 'open', 'ov', ot, openS, h);
@@ -217,6 +228,7 @@ export class WheelEngine {
     if (Math.abs(p.rv) < 0.002 && Math.abs(p.rest - ot) < 0.0006) { p.rest = ot; p.rv = 0; }
     if (Math.abs(p.colv) < 0.002 && Math.abs(p.col - ct) < 0.0006) { p.col = ct; p.colv = 0; }
     if (Math.abs(p.pillv) < 0.002 && Math.abs(p.pill - pillT) < 0.0006) { p.pill = pillT; p.pillv = 0; }
+    if (Math.abs(p.labv) < 0.002 && Math.abs(p.lab - labT) < 0.0006) { p.lab = labT; p.labv = 0; }
     if (open && !gOn && Math.abs(p.dyv) < 1 && Math.abs(p.dy) < 0.3) { p.dy = 0; p.dyv = 0; }
     if (!open && this.phaseB && p.open === 0 && p.ov === 0) { p.dy = 0; p.dyv = 0; p.wdy = 0; p.wdyv = 0; }
     if (Math.abs(p.wdyv) < 0.5 && Math.abs(p.wdy - p.dy) < 0.2) { p.wdy = p.dy; p.wdyv = 0; }
@@ -241,7 +253,7 @@ export class WheelEngine {
     this.measure();
     const glowing = this.stepGlow(dt);
 
-    const moving = p.drag || p.gy || p.gd || p.gs || csMoving || p.sink !== 0 || p.sinkv !== 0 || p.tog !== togT || this.swapPending || (this.swapAt && now - this.swapAt < 1500) || p.dy !== 0 || p.dyv !== 0 || p.wdy !== p.dy || p.lift !== 0 || p.liftT !== 0 || p.hov !== hovT || p.pill !== pillT || p.v !== 0 || p.ov !== 0 || p.rv !== 0 || p.colv !== 0 || (!open && !this.phaseB) || (open && !this.openB) || (this.openBAt && now - this.openBAt < 950) || now - (this.openAt || -1e9) < 950 || now - (this.closeAt || -1e9) < 250 || Math.abs(p.sv) > 0.001 || p.tx !== aim.x || p.ty !== aim.y || p.gl !== aim.g || fading || glowing;
+    const moving = p.drag || p.gy || p.gd || p.gs || csMoving || p.sink !== 0 || p.sinkv !== 0 || p.tog !== togT || !!this.riseAt || p.lab !== labT || this.swapPending || (this.swapAt && now - this.swapAt < 1500) || p.dy !== 0 || p.dyv !== 0 || p.wdy !== p.dy || p.lift !== 0 || p.liftT !== 0 || p.hov !== hovT || p.pill !== pillT || p.v !== 0 || p.ov !== 0 || p.rv !== 0 || p.colv !== 0 || (!open && !this.phaseB) || (open && !this.openB) || (this.openBAt && now - this.openBAt < 950) || now - (this.openAt || -1e9) < 950 || now - (this.closeAt || -1e9) < 250 || Math.abs(p.sv) > 0.001 || p.tx !== aim.x || p.ty !== aim.y || p.gl !== aim.g || fading || glowing;
     // the pointer's heading keeps easing for a moment after it stops, so stay awake a little longer
     const busy = !!(moving || this.dirty || this.measureDue || now - (this.lastMove || -1e9) < 1000);
     if (moving || this.dirty) { this.resting = false; this.dirty = false; this.paint(); }
@@ -372,7 +384,7 @@ export class WheelEngine {
   pickDeck(to) {
     if (this.deck === to || this.swapPending || this.open) return;
     const p = this.p;
-    this.swapPending = true; this.postSwap = false; p.sinkT = 1; p.sinkv = 1.2; this.dirty = true;
+    this.swapPending = true; this.postSwap = false; this.riseAt = 0; p.sinkT = 1; p.sinkv = 1.2; this.dirty = true;
     this.wake();
   }
   cardClick(i) {
@@ -484,7 +496,7 @@ export class WheelEngine {
       }
       if (Math.abs(ddy) > ddx && ddy > 0 && onCard && !this.swapPending) {
         p.target = Math.round(p.pos); p.v = 0;
-        p.gs = { y0: p.drag.y, ly: e.clientY, lt: performance.now(), vel: 0 }; this.postSwap = false;
+        p.gs = { y0: p.drag.y, ly: e.clientY, lt: performance.now(), vel: 0 }; this.postSwap = false; this.riseAt = 0;
         p.drag = null; p.moved = 99;
         return;
       }
