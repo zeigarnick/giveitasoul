@@ -1,0 +1,17 @@
+/* The SOUL.md view inside the details window. */
+.soulfile-head { display: flex; justify-content: space-between; align-items: baseline; }
+.soulfile-back { all: unset; cursor: pointer; font-size: 13px; line-height: 16px; color: #6B6358; }
+.soulfile-back:hover { color: #141210; }
+.soulfile-back:focus-visible { outline: 2px solid #141210; outline-offset: 3px; border-radius: 4px; }
+.soulfile {
+  margin: 12px 0 0; padding: 14px 16px; box-sizing: border-box; height: var(--soulfile-h, 232px);
+  overflow: auto; overscroll-behavior: contain; touch-action: pan-y;
+  border-radius: 12px; background: #F1ECE2; border: 1px solid #E4DCCB;
+  font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; line-height: 18px; color: #2B2621;
+  white-space: pre-wrap; word-break: break-word; tab-size: 2; user-select: text; -webkit-user-select: text; cursor: text;
+}
+.soulfile-actions { margin-top: 16px; display: flex; gap: 8px; }
+.soulfile-actions .btn-primary, .soulfile-actions .btn-secondary { height: 40px; padding: 0 16px; font-size: 14px; border: none; cursor: pointer; font-family: Geist, sans-serif; }
+.soulfile-actions .btn-secondary { border: 1px solid #CFC6B6; }
+.soulfile-note { margin-top: 10px; font-size: 12px; line-height: 16px; color: #6B6358; }
+.sheet-actions .btn-primary { border: none; cursor: pointer; font-family: Geist, sans-serif; }
