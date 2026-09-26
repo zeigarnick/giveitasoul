@@ -55,32 +55,52 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
     const x = L(wx, ox) - (wx + CARD_W / 2 - PX) * 0.22 * slc, y = L(wy, oy) + 680 * sl;
     const op = isActive ? (sheetOn ? 0 : wop) : wop * (1 - op01);
     st['card' + i] = {
-      transform: 'translate(' + x.toFixed(1) + 'px, ' + y.toFixed(1) + 'px) rotate(' + (L(wa, oa) + Math.sign(d) * slc * 10 + Math.max(-6, Math.min(6, cst.v * 2.2)) * Math.sign(d)).toFixed(2) + 'deg) perspective(1400px) rotateY(' + L(wry, 0).toFixed(2) + 'deg) scale(' + (L(ws, os) * (1 - 0.08 * slc)).toFixed(4) + ')',
+      transform: 'translate(' + x.toFixed(1) + 'px, ' + y.toFixed(1) + 'px) rotate(' + (L(wa, oa) + Math.sign(d) * slc * 10 + Math.max(-6, Math.min(6, cst.v * 2.2)) * Math.sign(d)).toFixed(2) + 'deg) perspective(1400px) rotateY(' + L(wry, 0).toFixed(2) + 'deg)' + (isActive ? tilt(p) : '') + ' scale(' + (L(ws, os) * (1 - 0.08 * slc)).toFixed(4) + ')',
       opacity: op.toFixed(3),
       zIndex: isActive && op01 > 0.01 ? 120 : 100 - Math.round(ad * 10),
       filter: 'brightness(' + (1 - cfg.dim * f * (1 - op01)).toFixed(3) + ')',
       boxShadow: cardShadow(near, cfg)
     };
+    st['glare' + i] = isActive ? glare(p) : NO_GLARE;
     // off the window, invisible, or under the full-strength scrim
     cardPause[i] = e.rm || op < 0.001 || op01 > 0.98 || x < -300 - ext || x > Lay.W + 20 + ext || y > Lay.H + 20 + exty;
   }
   return { active, cardPause };
 }
 
-// A fan card's shadow: deeper and darker the nearer it is to the centre (near 0..1).
-function shadowParts(near, cfg) {
-  return { y: Math.round(18 + 14 * near), blur: Math.round(34 + 20 * near), spread: -18, a: cfg.shadow * (0.35 + 0.65 * near) };
+// Shadows are two layers (Interface Craft, Compositing: Layered Shadows): a tight, darker contact shadow where the
+// card meets the page and a wide, soft ambient one. Both deepen the nearer a card is to the centre (near 0..1).
+function shadowLayers(near, cfg) {
+  return [
+    { y: 1 + near, blur: 2 + 3 * near, spread: 0, a: cfg.shadow * (0.3 + 0.2 * near) },
+    { y: Math.round(18 + 14 * near), blur: Math.round(34 + 20 * near), spread: -18, a: cfg.shadow * (0.35 + 0.65 * near) }
+  ];
 }
+// the open window's two layers
+const OPEN_SHADOW = [{ y: 2, blur: 6, spread: 0, a: 0.08 }, { y: 50, blur: 110, spread: -24, a: 0.32 }];
+const shadowCss = (layers, digits) => layers.map((s) => '0 ' + s.y.toFixed(digits) + 'px ' + s.blur.toFixed(digits) + 'px ' + s.spread.toFixed(digits) + 'px rgba(20,18,16,' + s.a.toFixed(3) + ')').join(', ');
 function cardShadow(near, cfg) {
-  const s = shadowParts(near, cfg);
-  return '0 ' + s.y + 'px ' + s.blur + 'px ' + s.spread + 'px rgba(20,18,16,' + s.a.toFixed(3) + ')';
+  return shadowCss(shadowLayers(near, cfg), 0);
 }
-// The details window's shadow: the centre card's shadow in window pixels (the card's is scaled by its transform)
-// at m = 0, growing to the open window's larger, softer shadow at m = 1.
-function sheetShadow(P0, m, cfg) {
-  const s = shadowParts(P0.near, cfg), k = P0.ws;
-  const L = (a, b) => a + (b - a) * m;
-  return '0 ' + L(s.y * k, 50).toFixed(1) + 'px ' + L(s.blur * k, 110).toFixed(1) + 'px ' + L(s.spread * k, -24).toFixed(1) + 'px rgba(20,18,16,' + L(s.a, 0.32).toFixed(3) + ')';
+// The details window's shadow: the centre card's layers in window pixels (the card's are scaled by its transform)
+// at m = 0, growing to the open window's at m = 1; `lift` deepens the ambient layer mid-flight.
+function sheetShadow(P0, m, lift, cfg) {
+  const k = P0.ws, L = (a, b) => a + (b - a) * m;
+  const layers = shadowLayers(P0.near, cfg).map((s, j) => {
+    const o = OPEN_SHADOW[j], up = j === 1 ? lift : 0;
+    return { y: L(s.y * k, o.y) + 24 * up, blur: L(s.blur * k, o.blur) + 40 * up, spread: L(s.spread * k, o.spread), a: L(s.a, o.a) + 0.06 * up };
+  });
+  return shadowCss(layers, 1);
+}
+
+// Tilt toward the pointer (up to 8° across, 6° down) and a soft highlight that follows it (the v0 gift card's
+// perspective tilt and radial glare). The glare is a pre-drawn spot moved with transform, so only transform and
+// opacity change.
+const tilt = (p) => (p.tx || p.ty ? ' rotateX(' + (-p.ty * 6).toFixed(2) + 'deg) rotateY(' + (p.tx * 8).toFixed(2) + 'deg)' : '');
+const NO_GLARE = { opacity: '0.000', transform: 'translate(0px, 0px)' };
+function glare(p) {
+  if (!p.gl) return NO_GLARE;
+  return { opacity: (0.55 * p.gl).toFixed(3), transform: 'translate(' + ((p.tx + 1) / 2 * CARD_W - 180).toFixed(1) + 'px, ' + ((p.ty + 1) / 2 * CARD_H - 180).toFixed(1) + 'px)' };
 }
 
 // The hero line fades up as a card opens. Its word "soul" takes the typeface the pointer points at and warms with
@@ -132,12 +152,16 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
   const artXT = LC(0, artX1), artYT = LC(0, artY1), RT = LC(20 * ART, 28);
   e.slotDy = cy0 - cy1;
   const dyE = (p.wdy || 0) * clamp01(m), gsc = 1 - 0.07 * clamp01((p.wdy || 0) / 320) * clamp01(m);
-  const W = LS(W0, WT), H = LS(H0, HT), cx = L(cx0, cx1), cy = L(cy0, cy1) + dyE;
+  // Arc and lift (Interface Craft, Animations: Arc paths): mid-flight the card rises above the straight path, grows a
+  // little and casts a deeper shadow, as if lifted off the page. Nothing at either end, so the hand-offs stay exact.
+  const lift = e.rm ? 0 : 4 * clamp01(m) * (1 - clamp01(m));
+  const W = LS(W0, WT), H = LS(H0, HT), cx = L(cx0, cx1), cy = L(cy0, cy1) + dyE - 22 * Lay.K * lift;
+  const ls = 1 + 0.03 * lift;
   const sq = cfg.squash * Math.max(-1, Math.min(1, p.ov / 6)) * 0.06;
 
   // the pill: above the centre card on the wheel, floating just outside the window when open; it bends with speed
   const mc = clamp01(m);
-  const pillX = cx, pillY = cy - H * gsc / 2 - L(18, 14) + ((p.dy || 0) - (p.wdy || 0)) * mc;
+  const pillX = cx, pillY = cy - H * gsc * ls / 2 - L(18, 14) + ((p.dy || 0) - (p.wdy || 0)) * mc;
   const tn0 = performance.now(), pr = e.pillPrev;
   if (!pr || tn0 - pr.t > 4) {
     const inst = pr ? (pillY - pr.y) / ((tn0 - pr.t) / 1000) : 0;
@@ -155,17 +179,20 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
   };
 
   const vis = sheetOn ? 'visible' : 'hidden', pe = open ? 'auto' : 'none';
-  const blur = 'blur(' + (cfg.blur * clamp01(restE)).toFixed(2) + 'px)';
+  // frosted backdrop, with saturation lifted as it blurs so it reads richer, not greyer (Compositing: Backdrop Filters)
+  const blur = 'blur(' + (cfg.blur * clamp01(restE)).toFixed(2) + 'px) saturate(' + (1 + 0.4 * clamp01(restE)).toFixed(3) + ')';
   st.scrim = { background: 'rgba(244,240,232,' + (cfg.tint * clamp01(restE)).toFixed(3) + ')', backdropFilter: blur, WebkitBackdropFilter: blur, pointerEvents: pe, visibility: vis };
   st.sheet = {
     visibility: vis, width: Math.max(1, W).toFixed(1) + 'px', height: Math.max(1, H).toFixed(1) + 'px',
-    transform: 'translate(' + (cx - W / 2).toFixed(1) + 'px, ' + (cy - H / 2).toFixed(1) + 'px) rotate(' + L(P0.wa, 0).toFixed(2) + 'deg) scale(' + ((1 + sq) * gsc).toFixed(4) + ', ' + ((1 - sq) * gsc).toFixed(4) + ')',
+    // carries the card's tilt as it lifts, so a tilted card opens without a jump
+    transform: 'translate(' + (cx - W / 2).toFixed(1) + 'px, ' + (cy - H / 2).toFixed(1) + 'px) rotate(' + L(P0.wa, 0).toFixed(2) + 'deg)' + (p.tx || p.ty ? ' perspective(1400px)' + tilt(p) : '') + ' scale(' + ((1 + sq) * gsc * ls).toFixed(4) + ', ' + ((1 - sq) * gsc * ls).toFixed(4) + ')',
     borderRadius: LS(20 * P0.ws, RT).toFixed(1) + 'px',
     // starts as exactly the centre card's shadow (scaled like the card), so handing back to the card is seamless
-    boxShadow: sheetShadow(P0, clamp01(m), cfg) + ', 0 0 0 0.5px rgba(20,18,16,' + (0.1 * clamp01(m)).toFixed(3) + ')',
+    boxShadow: sheetShadow(P0, clamp01(m), lift, cfg) + ', 0 0 0 0.5px rgba(20,18,16,' + (0.1 * clamp01(m)).toFixed(3) + ')',
     pointerEvents: pe
   };
   st.art = { left: LS(0, artXT).toFixed(1) + 'px', top: LS(0, artYT).toFixed(1) + 'px', transform: 'scale(' + LS(P0.ws, ART).toFixed(4) + ')', boxShadow: '0 18px 40px -22px rgba(20,18,16,' + (0.35 * clamp01(m)).toFixed(3) + ')' };
+  st.artGlare = glare(p);
   st.det = { left: Math.round(textX) + 'px', top: Math.round(textY) + 'px' };
 
   textStyles(e, open, st);

@@ -41,6 +41,10 @@
 /* the fan */
 .fancard { position: absolute; left: 0; top: 0; width: 232px; height: 324px; border-radius: 20px; will-change: transform; }
 
+/* the highlight that follows the pointer over the centre card: a pre-drawn spot moved by transform */
+.glare { position: absolute; inset: 0; border-radius: 20px; overflow: hidden; pointer-events: none; }
+.glare-spot { position: absolute; left: 0; top: 0; width: 360px; height: 360px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.25) 35%, rgba(255,255,255,0) 70%); mix-blend-mode: overlay; opacity: 0; will-change: transform, opacity; }
+
 /* open card: scrim, pill and details window */
 .scrim { position: absolute; left: calc(var(--ext, 0) * -1px); top: calc(var(--exty, 0) * -1px); width: calc(var(--W) + var(--ext, 0) * 2px); height: calc(var(--H) + var(--exty, 0) * 2px); z-index: 140; }
 .pill { position: absolute; left: 0; top: 0; z-index: 160; pointer-events: none; }

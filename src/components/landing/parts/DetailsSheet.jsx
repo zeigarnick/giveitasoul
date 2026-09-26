@@ -47,6 +47,7 @@ export function DetailsSheet({ engine, st, pill, soul, L }) {
       <div ref={engine.bind('sheet')} role="dialog" aria-label={soul.name} className="sheet" style={st.sheet}>
         <div ref={engine.bind('art')} className="sheet-art" style={st.art}>
           <SoulCard s={soul} />
+          <span className="glare"><span ref={engine.bind('artGlare')} className="glare-spot" style={st.artGlare} /></span>
         </div>
         <div ref={engine.bind('det')} className="sheet-text" style={{ width: `${textW}px`, ...st.det }}>
           {file ? (

@@ -8,6 +8,7 @@ export function CardFan({ engine, st, souls }) {
       <button type="button" className="slotbtn" aria-label={s.name} onClick={() => engine.cardClick(i)} onFocus={(e) => engine.cardFocus(i, e)}>
         <SoulCard s={s} />
       </button>
+      <span className="glare"><span ref={engine.bind('glare' + i)} className="glare-spot" style={st['glare' + i]} /></span>
     </div>
   ));
 }

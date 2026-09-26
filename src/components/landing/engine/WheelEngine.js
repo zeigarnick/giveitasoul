@@ -27,7 +27,9 @@ export class WheelEngine {
     this.key = '';
     this.snapshot = { open: false, deck: 'mbti', key: '', layout: this.layout };
     this.listeners = new Set();
-    this.p = { pos: this.rm ? 0 : -4, v: 0, target: 0, drag: null, moved: 0, open: 0, ov: 0, rest: 0, rv: 0, sv: 0, last: 0 };
+    this.p = { pos: this.rm ? 0 : -4, v: 0, target: 0, drag: null, moved: 0, open: 0, ov: 0, rest: 0, rv: 0, sv: 0, last: 0, tx: 0, txv: 0, ty: 0, tyv: 0, gl: 0, glv: 0 };
+    // where the pointer aims the centre card's tilt and glare (-1..1 across the card; g is 1 while hovering it)
+    this.aim = { x: 0, y: 0, g: 0 };
     this.souls = ring('mbti');
     this.bez = cubicBezier(FEEL.fx1, FEEL.fy1, FEEL.fx2, FEEL.fy2);
     this.els = {};
@@ -154,6 +156,10 @@ export class WheelEngine {
     if (p.dy == null) { p.dy = 0; p.dyv = 0; }
     if (p.wdy == null) { p.wdy = 0; p.wdyv = 0; p.lift = 0; p.liftv = 0; p.liftT = 0; p.hov = 0; p.hovv = 0; }
     const dragS = springK(0.38, 0.82), gOn = !!(p.gd && p.gd.on);
+    // tilt follows the pointer on a soft spring; anything else going on flattens it
+    const tiltS = springK(0.35, 0.7);
+    if (open || p.drag || p.gy || p.gs || p.gd || this.swapPending || rm) this.aim = { x: 0, y: 0, g: 0 };
+    const aim = this.aim;
     const tether = springK(0.17, 0.72), nud = springK(0.46, 0.6), hovS = springK(0.25, 0.9);
 
     // idle nudge: the centre card lifts a little when nobody has touched anything for a while
@@ -189,6 +195,9 @@ export class WheelEngine {
         stepSpring(p, 'rest', 'rv', ot, restS, h);
       }
       stepSpring(p, 'col', 'colv', ct, colS, h);
+      stepSpring(p, 'tx', 'txv', aim.x, tiltS, h);
+      stepSpring(p, 'ty', 'tyv', aim.y, tiltS, h);
+      stepSpring(p, 'gl', 'glv', aim.g, tiltS, h);
     }
     // settle: snap to the target once close enough, so "at rest" is exact
     if (!p.drag && Math.abs(p.v) < 0.002 && Math.abs(p.pos - p.target) < 0.0006) { p.pos = p.target; p.v = 0; }
@@ -202,6 +211,7 @@ export class WheelEngine {
     if (Math.abs(p.hovv) < 0.002 && Math.abs(p.hov - hovT) < 0.002) { p.hov = hovT; p.hovv = 0; }
     if (!p.gs && Math.abs(p.sinkv) < 0.002 && Math.abs(p.sink - p.sinkT) < 0.0006) { p.sink = p.sinkT; p.sinkv = 0; if (p.sink === 0) this.postSwap = false; }
     if (Math.abs(p.togv) < 0.002 && Math.abs(p.tog - togT) < 0.0006) { p.tog = togT; p.togv = 0; }
+    for (const [x, v, t] of [['tx', 'txv', aim.x], ['ty', 'tyv', aim.y], ['gl', 'glv', aim.g]]) if (Math.abs(p[v]) < 0.002 && Math.abs(p[x] - t) < 0.0006) { p[x] = t; p[v] = 0; }
     const liveV = p.drag ? p.drag.vel : p.v;
     p.sv += (liveV - p.sv) * Math.min(1, dt * 14);
 
@@ -214,7 +224,7 @@ export class WheelEngine {
     this.measure();
     const glowing = this.stepGlow(dt);
 
-    const moving = p.drag || p.gy || p.gd || p.gs || csMoving || p.sink !== 0 || p.sinkv !== 0 || p.tog !== togT || this.swapPending || (this.swapAt && now - this.swapAt < 1500) || p.dy !== 0 || p.dyv !== 0 || p.wdy !== p.dy || p.lift !== 0 || p.liftT !== 0 || p.hov !== hovT || p.v !== 0 || p.ov !== 0 || p.rv !== 0 || p.colv !== 0 || (!open && !this.phaseB) || (open && !this.openB) || (this.openBAt && now - this.openBAt < 950) || now - (this.openAt || -1e9) < 950 || now - (this.closeAt || -1e9) < 250 || Math.abs(p.sv) > 0.001 || fading || glowing;
+    const moving = p.drag || p.gy || p.gd || p.gs || csMoving || p.sink !== 0 || p.sinkv !== 0 || p.tog !== togT || this.swapPending || (this.swapAt && now - this.swapAt < 1500) || p.dy !== 0 || p.dyv !== 0 || p.wdy !== p.dy || p.lift !== 0 || p.liftT !== 0 || p.hov !== hovT || p.v !== 0 || p.ov !== 0 || p.rv !== 0 || p.colv !== 0 || (!open && !this.phaseB) || (open && !this.openB) || (this.openBAt && now - this.openBAt < 950) || now - (this.openAt || -1e9) < 950 || now - (this.closeAt || -1e9) < 250 || Math.abs(p.sv) > 0.001 || p.tx !== aim.x || p.ty !== aim.y || p.gl !== aim.g || fading || glowing;
     // the pointer's heading keeps easing for a moment after it stops, so stay awake a little longer
     const busy = !!(moving || this.dirty || this.measureDue || now - (this.lastMove || -1e9) < 1000);
     if (moving || this.dirty) { this.dirty = false; this.paint(); }
@@ -359,6 +369,19 @@ export class WheelEngine {
   // Horizontal drag spins the wheel. From rest, a vertical drag either lifts the centre card open (up) or sinks
   // the fan to switch decks (down). While open, dragging the window down dismisses it.
 
+  // Tilt and glare: with a mouse over the resting centre card, aim them at the pointer (Interface Craft's v0 gift card).
+  aimAt(e) {
+    const p = this.p;
+    const idle = e.pointerType === 'mouse' && !this.rm && !this.open && !p.drag && !p.gy && !p.gs && !p.gd && !this.swapPending && (e.buttons || 0) === 0;
+    const el = idle && this.els['card' + this.activeIndex()];
+    if (el) {
+      const r = el.getBoundingClientRect();
+      const u = ((e.clientX - r.left) / r.width) * 2 - 1, v = ((e.clientY - r.top) / r.height) * 2 - 1;
+      if (Math.abs(u) <= 1 && Math.abs(v) <= 1) { this.aim = { x: u, y: v, g: 1 }; this.dirty = true; return; }
+    }
+    if (this.aim.g) { this.aim = { x: 0, y: 0, g: 0 }; this.dirty = true; }
+  }
+
   // artboard pixels per screen pixel
   scale() { return this.L.W / (this.els.root ? this.els.root.getBoundingClientRect().width : this.L.W); }
 
@@ -371,6 +394,8 @@ export class WheelEngine {
       if (this.openB && p.col > 0.9) p.gd = { x0: e.clientX, y0: e.clientY, ly: e.clientY, lt: performance.now(), vel: 0, on: false };
       return;
     }
+    // a press settles the tilt and glare, so a tapped card opens flat
+    this.aim = { x: 0, y: 0, g: 0 };
     p.drag = { x: e.clientX, y: e.clientY, pos: p.pos, lx: e.clientX, lt: performance.now(), vel: 0, axis: null };
     p.moved = 0; p.v = 0;
   };
@@ -378,6 +403,7 @@ export class WheelEngine {
   onPointerMove = (e) => {
     const p = this.p;
     this.mx = e.clientX; this.my = e.clientY; this.mxMoved = true; this.lastMove = performance.now();
+    this.aimAt(e);
     this.wake();
     if (this.open && this.els.root && this.pillPos) {
       const rr = this.els.root.getBoundingClientRect(), sc = this.L.W / rr.width;
@@ -502,7 +528,7 @@ export class WheelEngine {
     p.target = Math.round(p.pos + (vel / 1000) * d / (1 - d));
   };
 
-  onPointerLeave = () => { this.mx = null; this.my = null; this.lastMove = performance.now(); this.onPointerUp(); };
+  onPointerLeave = () => { this.aim = { x: 0, y: 0, g: 0 }; this.mx = null; this.my = null; this.lastMove = performance.now(); this.onPointerUp(); };
 
   onWheel = (e) => {
     const p = this.p;
