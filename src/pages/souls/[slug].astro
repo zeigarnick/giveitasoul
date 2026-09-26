@@ -1,0 +1,205 @@
+---
+// A page for each soul: the card, what it's like, and its SOUL.md to copy, download or link.
+import SoulCard from '../../components/landing/SoulCard.jsx';
+import { MBTI, ENNEAGRAM } from '../../data/souls.js';
+import { SOUL_FILES, soulSlug } from '../../lib/souls.js';
+
+export function getStaticPaths() {
+  const decks = [
+    { key: 'mbti', label: 'MBTI', souls: MBTI },
+    { key: 'ennea', label: 'Enneagram', souls: ENNEAGRAM },
+  ];
+  return decks.flatMap((deck) =>
+    deck.souls.map((soul, i) => {
+      const prev = deck.souls[(i - 1 + deck.souls.length) % deck.souls.length];
+      const next = deck.souls[(i + 1) % deck.souls.length];
+      return {
+        params: { slug: soulSlug(soul.name) },
+        props: { soul, deck: deck.label, index: i + 1, count: deck.souls.length, prev, next },
+      };
+    }),
+  );
+}
+
+const { soul, deck, index, count, prev, next } = Astro.props;
+const slug = soulSlug(soul.name);
+const md = SOUL_FILES[slug] || '';
+const says = soul.says.replace(/^[“"]|[”"]$/g, '');
+const title = `${soul.name} — a SOUL.md for your AI agent · giveitasoul`;
+const description = `${soul.line} ${says}`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content={`${soul.name} · giveitasoul`} />
+    <meta property="og:description" content={description} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="theme-color" content="#F4F0E8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate" type="text/markdown" href={`/souls/${slug}.md`} title="SOUL.md" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" />
+  </head>
+  <body style={`--soul-bg: ${soul.bg}; --soul-ac: ${soul.ac};`}>
+    <header class="bar">
+      <a href="/" class="logo" aria-label="giveitasoul home">give<span class="logo-it">it<svg width="20" height="8" viewBox="0 0 30 10" fill="none" aria-hidden="true"><path d="M2 7 C 9 5, 18 6, 28 3" stroke="#D22E1E" stroke-width="3.5" stroke-linecap="round" /></svg></span>asoul</a>
+      <a href="/" class="bar-link">All souls</a>
+    </header>
+
+    <main class="page">
+      <section class="intro">
+        <div class="card-wrap" aria-hidden="true">
+          <div class="card"><SoulCard client:only="react" s={soul} /></div>
+        </div>
+        <div class="intro-text">
+          <p class="meta">{deck} · {soul.anchor} · {soul.weight}</p>
+          <h1>{soul.name}</h1>
+          <p class="line">{soul.line}</p>
+          <p class="says">{soul.says}</p>
+          <div class="moments">
+            <p class="moments-title">In moments, it will…</p>
+            <ul>{(soul.moments || []).map((m) => <li>{m}</li>)}</ul>
+          </div>
+          <a href="#soul-md" class="btn btn-primary">Use this soul</a>
+        </div>
+      </section>
+
+      <section class="file" id="soul-md" aria-labelledby="file-title">
+        <div class="file-head">
+          <div>
+            <h2 id="file-title">SOUL.md</h2>
+            <p class="file-sub">Give this to your agent. It's plain text, so it works anywhere.</p>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" data-copy="file">Copy</button>
+            <a class="btn btn-secondary" href={`/souls/${slug}.md`} download={`${slug}.md`}>Download</a>
+            <button type="button" class="btn btn-secondary" data-copy="link">Copy link</button>
+          </div>
+        </div>
+        <pre class="md" id="md" tabindex="0">{md}</pre>
+      </section>
+
+      <section class="how" aria-labelledby="how-title">
+        <h2 id="how-title">How to give it to your agent</h2>
+        <ol>
+          <li><strong>Paste it.</strong> Copy the file into your agent's custom instructions or personality settings.</li>
+          <li><strong>Save it.</strong> If your agent reads files, download it and save it as <code>SOUL.md</code> where your agent keeps its setup.</li>
+          <li><strong>Link it.</strong> If your agent can read the web, give it the link and say: "Use this as your soul."</li>
+        </ol>
+      </section>
+
+      <nav class="pager" aria-label={`More ${deck} souls`}>
+        <a href={`/souls/${soulSlug(prev.name)}/`} class="pager-link"><span class="pager-dir">← Previous</span><span class="pager-name">{prev.name}</span></a>
+        <span class="pager-count">{String(index).padStart(2, '0')} / {count}</span>
+        <a href={`/souls/${soulSlug(next.name)}/`} class="pager-link is-next"><span class="pager-dir">Next →</span><span class="pager-name">{next.name}</span></a>
+      </nav>
+    </main>
+
+    <script is:inline define:vars={{ slug }}>
+      (function () {
+        var md = document.getElementById('md').textContent;
+        async function copy(text) {
+          try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+          try {
+            var t = document.createElement('textarea'); t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
+            document.body.appendChild(t); t.select(); var ok = document.execCommand('copy'); t.remove(); return ok;
+          } catch (e) { return false; }
+        }
+        document.querySelectorAll('[data-copy]').forEach(function (btn) {
+          var label = btn.textContent;
+          btn.addEventListener('click', async function () {
+            var link = btn.dataset.copy === 'link';
+            var ok = await copy(link ? location.origin + '/souls/' + slug + '.md' : md);
+            if (!ok) return;
+            btn.textContent = link ? 'Link copied' : 'Copied';
+            clearTimeout(btn._t); btn._t = setTimeout(function () { btn.textContent = label; }, 1600);
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  html { background: #F4F0E8; }
+  body { margin: 0; background: #F4F0E8; color: #141210; font-family: Geist, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: #141210; }
+</style>
+
+<style>
+  .bar { max-width: 1120px; margin: 0 auto; padding: 28px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .logo { position: relative; display: flex; align-items: baseline; font-family: 'Instrument Serif', Georgia, serif; font-size: 28px; letter-spacing: -0.03em; text-decoration: none; }
+  .logo-it { position: relative; color: #8A8174; }
+  .logo-it svg { position: absolute; left: -2px; top: 46%; }
+  .bar-link { font-size: 15px; text-decoration: none; padding: 10px 0; }
+  .bar-link:hover { color: #4A443C; }
+
+  .page { max-width: 1120px; margin: 0 auto; padding: 0 24px 96px; }
+
+  .intro { display: grid; grid-template-columns: auto 1fr; gap: 64px; align-items: center; padding: 40px 0 72px; }
+  .card-wrap { width: 302px; height: 421px; }
+  .card { width: 232px; height: 324px; transform: scale(1.3); transform-origin: 0 0; border-radius: 20px; overflow: hidden; background: var(--soul-bg); box-shadow: 0 30px 60px -30px rgba(20,18,16,0.45), 0 8px 20px -12px rgba(20,18,16,0.25); }
+  .meta { margin: 0; font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 16px; letter-spacing: 0.06em; color: #6B6358; text-transform: uppercase; }
+  h1 { margin: 10px 0 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 72px; line-height: 1; letter-spacing: -0.03em; }
+  .line { margin: 14px 0 0; font-size: 18px; line-height: 26px; color: #4A443C; }
+  .says { margin: 20px 0 0; font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 26px; line-height: 34px; color: #3A342C; max-width: 34ch; text-wrap: pretty; }
+  .moments { margin-top: 28px; padding-top: 18px; border-top: 1px solid #E4DCCB; max-width: 480px; }
+  .moments-title { margin: 0 0 8px; font-size: 12px; line-height: 16px; color: #6B6358; }
+  .moments ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .moments li { font-size: 16px; line-height: 24px; }
+  .moments li::before { content: '— '; }
+  .intro-text > .btn { margin-top: 32px; }
+
+  .btn { height: 44px; padding: 0 20px; border-radius: 99px; display: inline-flex; align-items: center; font-family: Geist, sans-serif; font-size: 15px; font-weight: 500; text-decoration: none; cursor: pointer; box-sizing: border-box; white-space: nowrap; }
+  .btn-primary { background: #141210; color: #F4F0E8; border: none; }
+  .btn-primary:hover { color: #F4F0E8; background: #2B2621; }
+  .btn-secondary { background: transparent; color: #141210; border: 1px solid #CFC6B6; font-weight: 400; }
+  .btn-secondary:hover { border-color: #141210; }
+  .btn:focus-visible { outline: 2px solid #141210; outline-offset: 3px; }
+
+  .file { padding: 40px; border-radius: 28px; background: #FBF8F1; box-shadow: 0 0 0 0.5px rgba(20,18,16,0.08), 0 30px 80px -40px rgba(20,18,16,0.3); scroll-margin-top: 24px; }
+  .file-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+  h2 { margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 40px; line-height: 44px; letter-spacing: -0.02em; }
+  .file-sub { margin: 8px 0 0; font-size: 15px; line-height: 22px; color: #6B6358; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .md { margin: 28px 0 0; padding: 24px 28px; border-radius: 16px; background: #F1ECE2; border: 1px solid #E4DCCB; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; line-height: 22px; color: #2B2621; white-space: pre-wrap; word-break: break-word; overflow-x: auto; }
+  .md:focus-visible { outline: 2px solid #141210; outline-offset: 3px; }
+
+  .how { padding: 72px 0 0; max-width: 720px; }
+  .how ol { margin: 20px 0 0; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 16px; }
+  .how li { counter-increment: step; position: relative; padding-left: 44px; font-size: 16px; line-height: 24px; color: #3A342C; }
+  .how li::before { content: counter(step); position: absolute; left: 0; top: -2px; width: 28px; height: 28px; border-radius: 50%; border: 1px solid #CFC6B6; display: flex; align-items: center; justify-content: center; font-family: 'Geist Mono', monospace; font-size: 12px; color: #6B6358; }
+  .how strong { font-weight: 600; color: #141210; }
+  .how code { font-family: 'Geist Mono', monospace; font-size: 14px; background: #EAE3D6; padding: 1px 6px; border-radius: 6px; }
+
+  .pager { margin-top: 72px; padding-top: 24px; border-top: 1px solid #E4DCCB; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .pager-link { display: flex; flex-direction: column; gap: 4px; text-decoration: none; min-width: 0; }
+  .pager-link.is-next { text-align: right; align-items: flex-end; }
+  .pager-dir { font-family: 'Geist Mono', monospace; font-size: 12px; color: #6B6358; }
+  .pager-name { font-family: 'Instrument Serif', Georgia, serif; font-size: 28px; line-height: 32px; letter-spacing: -0.02em; }
+  .pager-link:hover .pager-name { color: #4A443C; }
+  .pager-count { font-family: 'Geist Mono', monospace; font-size: 12px; color: #6B6358; }
+
+  @media (max-width: 760px) {
+    .bar { padding: 18px 20px; }
+    .logo { font-size: 24px; }
+    .page { padding: 0 20px 64px; }
+    .intro { grid-template-columns: 1fr; gap: 32px; padding: 16px 0 48px; justify-items: center; }
+    .card-wrap { width: 232px; height: 324px; }
+    .card { transform: none; }
+    .intro-text { width: 100%; }
+    h1 { font-size: 48px; }
+    .says { font-size: 22px; line-height: 30px; }
+    .file { padding: 24px 20px; border-radius: 22px; }
+    h2 { font-size: 32px; line-height: 36px; }
+    .md { padding: 18px 16px; font-size: 13px; line-height: 20px; }
+    .pager-name { font-size: 22px; line-height: 26px; }
+    .pager-count { display: none; }
+  }
+</style>
