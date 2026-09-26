@@ -15,8 +15,6 @@
 .logo { position: relative; display: flex; align-items: baseline; font-family: 'Instrument Serif', Georgia, serif; letter-spacing: -0.03em; text-decoration: none; color: #141210; }
 .logo-it { position: relative; color: #8A8174; }
 .logo-it svg { position: absolute; left: -2px; top: 46%; }
-.navlinks { display: flex; gap: 28px; font-size: 15px; }
-.navlinks a { text-decoration: none; padding: 12px 0; }
 
 /* deck toggle */
 .toggle { position: absolute; height: 36px; padding: 3px; box-sizing: border-box; border-radius: 99px; background: rgba(20,18,16,0.07); display: flex; z-index: 210; }

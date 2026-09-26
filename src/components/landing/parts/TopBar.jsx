@@ -1,4 +1,4 @@
-// The logo and site links (links are desktop only).
+// The logo.
 export function TopBar({ L }) {
   return (
     <nav className="topbar" style={{ padding: L.navPad }}>
@@ -12,12 +12,6 @@ export function TopBar({ L }) {
         </span>
         {'asoul'}
       </a>
-      {L.links ? (
-        <div className="navlinks">
-          <a href="#">Browse souls</a>
-          <a href="#">Submit yours</a>
-        </div>
-      ) : null}
     </nav>
   );
 }

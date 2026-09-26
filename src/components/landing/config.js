@@ -28,13 +28,13 @@ export const GLOW = [[198, 43, 39], [224, 80, 26], [156, 111, 0], [95, 122, 14],
 // K sizes the whole fan (cards, radius, gap, lift) together; PYb + radius·K is the wheel's hidden centre.
 export const LAYOUTS = {
   desk: {
-    W: 1440, H: 900, K: 0.86, PYb: 616, heroTop: 156, heroPad: 0, h1: 72, h1Lh: 1, sub: 18, navPad: '28px 56px', logo: 28, links: true,
+    W: 1440, H: 900, K: 0.86, PYb: 616, heroTop: 156, heroPad: 0, h1: 72, h1Lh: 1, sub: 18, navPad: '28px 56px', logo: 28,
     tgTop: 32, tgW0: 112, tgW1: 148, tgFs: 14, tgRight: null, label: 470, fade: 280, bottom: 34, counterW: 180,
     hint: ' · drag, or pull down to switch deck', dragK: 1, nearY: 430,
     sheet: { row: true, PAD: 40, GAP: 40, TEXTW: 400, ART: 1.2, cy: 470 }, nameFs: 44, nameLh: 48
   },
   phone: {
-    W: 390, H: 844, K: 0.68, PYb: 492, heroTop: 112, heroPad: 24, h1: 46, h1Lh: 1.02, sub: 15, navPad: '18px 20px', logo: 24, links: false,
+    W: 390, H: 844, K: 0.68, PYb: 492, heroTop: 112, heroPad: 24, h1: 46, h1Lh: 1.02, sub: 15, navPad: '18px 20px', logo: 24,
     tgTop: 16, tgW0: 76, tgW1: 112, tgFs: 13, tgRight: 20, label: 372, fade: 48, bottom: 28, counterW: 72,
     hint: '', dragK: 0.62, nearY: 360,
     sheet: { row: false, PAD: 24, GAP: 20, ART: 0.62, cy: 440 }, nameFs: 34, nameLh: 38
