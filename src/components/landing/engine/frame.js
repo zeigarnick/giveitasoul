@@ -180,10 +180,12 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
     e.pillPrev = { y: pillY, t: tn0 };
   }
   const hv = clamp01(p.hov || 0);
-  const pwid = L(34, 44) + 10 * hv;
+  // it shrinks to nothing and fades as it springs away; coming back it overshoots a little wider (never below zero)
+  const ps = Math.max(0, p.pill == null ? 1 : p.pill);
+  const pwid = (L(34, 44) + 10 * hv) * ps;
   const bend = Math.max(-9, Math.min(9, (e.pillV || 0) / 70)) - 8 * clamp01((p.lift || 0) / 12) * (1 - mc);
   e.pillPos = { x: pillX, y: pillY };
-  const wheelF = sheetOn ? 1 : clamp01(1 - Math.abs(p.pos - Math.round(p.pos)) * 5) * clamp01(1 - Math.abs(p.sv) * 1.5);
+  const wheelF = clamp01(ps * 2.5);
   const pillAttr = {
     d: 'M' + (pillX - pwid / 2).toFixed(1) + ' ' + pillY.toFixed(1) + 'L' + pillX.toFixed(1) + ' ' + (pillY + bend).toFixed(1) + 'L' + (pillX + pwid / 2).toFixed(1) + ' ' + pillY.toFixed(1),
     'stroke-opacity': ((L(0.36, 0.24) + 0.28 * hv) * wheelF * (1 - clamp01((p.sink || 0) * 6))).toFixed(3)

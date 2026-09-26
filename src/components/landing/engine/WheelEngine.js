@@ -1,6 +1,6 @@
 import { MBTI, ENNEAGRAM } from '../../../data/souls.js';
 import { FEEL, FACES, LAYOUTS, PHONE_QUERY, MOTIONS, MOTION } from '../config.js';
-import { springK, stepSpring, cubicBezier, ringOffset } from './spring.js';
+import { springK, stepSpring, cubicBezier, ringOffset, clamp01 } from './spring.js';
 import { frame } from './frame.js';
 import { createWriter } from './writer.js';
 import { renderer } from '../shaders/renderer.js';
@@ -172,6 +172,12 @@ export class WheelEngine {
     if (settled && !rm && !this.learned && now - (this.lastInput || 0) > 2400 && now - (this.nudgeAt || 0) > 3600) { this.nudgeAt = now; p.liftT = 12; this.liftHold = now + 190; }
     if ((this.liftHold && now > this.liftHold) || !settled) { p.liftT = 0; this.liftHold = 0; }
     const hovT = (open && this.pillHover) || gOn ? 1 : 0;
+    // the pill handle's width follows how close a card is to the centre: full on a centred card, gone 0.3 of a card
+    // away, and gone during a fast spin so it doesn't flash as cards whip past. A quick, slightly bouncy spring
+    // smooths it, so it tracks a drag closely and pops back with a little overshoot as a card settles.
+    if (p.pill == null) { p.pill = 0; p.pillv = 0; }
+    const pillT = open || p.open > 0.002 ? 1 : clamp01(1 - Math.abs(p.pos - Math.round(p.pos)) / 0.3) * clamp01(1.5 - Math.abs(p.sv) * 0.5);
+    const pillS = rm ? springK(0.2, 1) : springK(0.22, 0.62);
 
     // deck swap: p.sink 0..1 sinks the fan; at the bottom the deck changes and it rises again
     if (p.sink == null) { p.sink = 0; p.sinkv = 0; p.sinkT = 0; p.tog = 0; p.togv = 0; }
@@ -192,6 +198,7 @@ export class WheelEngine {
       stepSpring(p, 'wdy', 'wdyv', p.dy, tether, h);
       stepSpring(p, 'lift', 'liftv', p.liftT, nud, h);
       stepSpring(p, 'hov', 'hovv', hovT, hovS, h);
+      stepSpring(p, 'pill', 'pillv', pillT, pillS, h);
       if (!p.gs) stepSpring(p, 'sink', 'sinkv', p.sinkT, sinkS, h);
       stepSpring(p, 'tog', 'togv', togT, togS, h);
       if (!p.drag) stepSpring(p, 'pos', 'v', p.target, wheelS, h);
@@ -209,6 +216,7 @@ export class WheelEngine {
     if (Math.abs(p.ov) < 0.002 && Math.abs(p.open - ot) < 0.0006) { p.open = ot; p.ov = 0; }
     if (Math.abs(p.rv) < 0.002 && Math.abs(p.rest - ot) < 0.0006) { p.rest = ot; p.rv = 0; }
     if (Math.abs(p.colv) < 0.002 && Math.abs(p.col - ct) < 0.0006) { p.col = ct; p.colv = 0; }
+    if (Math.abs(p.pillv) < 0.002 && Math.abs(p.pill - pillT) < 0.0006) { p.pill = pillT; p.pillv = 0; }
     if (open && !gOn && Math.abs(p.dyv) < 1 && Math.abs(p.dy) < 0.3) { p.dy = 0; p.dyv = 0; }
     if (!open && this.phaseB && p.open === 0 && p.ov === 0) { p.dy = 0; p.dyv = 0; p.wdy = 0; p.wdyv = 0; }
     if (Math.abs(p.wdyv) < 0.5 && Math.abs(p.wdy - p.dy) < 0.2) { p.wdy = p.dy; p.wdyv = 0; }
@@ -233,7 +241,7 @@ export class WheelEngine {
     this.measure();
     const glowing = this.stepGlow(dt);
 
-    const moving = p.drag || p.gy || p.gd || p.gs || csMoving || p.sink !== 0 || p.sinkv !== 0 || p.tog !== togT || this.swapPending || (this.swapAt && now - this.swapAt < 1500) || p.dy !== 0 || p.dyv !== 0 || p.wdy !== p.dy || p.lift !== 0 || p.liftT !== 0 || p.hov !== hovT || p.v !== 0 || p.ov !== 0 || p.rv !== 0 || p.colv !== 0 || (!open && !this.phaseB) || (open && !this.openB) || (this.openBAt && now - this.openBAt < 950) || now - (this.openAt || -1e9) < 950 || now - (this.closeAt || -1e9) < 250 || Math.abs(p.sv) > 0.001 || p.tx !== aim.x || p.ty !== aim.y || p.gl !== aim.g || fading || glowing;
+    const moving = p.drag || p.gy || p.gd || p.gs || csMoving || p.sink !== 0 || p.sinkv !== 0 || p.tog !== togT || this.swapPending || (this.swapAt && now - this.swapAt < 1500) || p.dy !== 0 || p.dyv !== 0 || p.wdy !== p.dy || p.lift !== 0 || p.liftT !== 0 || p.hov !== hovT || p.pill !== pillT || p.v !== 0 || p.ov !== 0 || p.rv !== 0 || p.colv !== 0 || (!open && !this.phaseB) || (open && !this.openB) || (this.openBAt && now - this.openBAt < 950) || now - (this.openAt || -1e9) < 950 || now - (this.closeAt || -1e9) < 250 || Math.abs(p.sv) > 0.001 || p.tx !== aim.x || p.ty !== aim.y || p.gl !== aim.g || fading || glowing;
     // the pointer's heading keeps easing for a moment after it stops, so stay awake a little longer
     const busy = !!(moving || this.dirty || this.measureDue || now - (this.lastMove || -1e9) < 1000);
     if (moving || this.dirty) { this.resting = false; this.dirty = false; this.paint(); }
