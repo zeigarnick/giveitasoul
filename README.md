@@ -13,6 +13,7 @@ Built with [Astro](https://astro.build) and one React island (`src/components/la
 - **Idle hint:** when nothing has been touched for a while, the centre card lifts a little to suggest swiping up.
 - **Open/close motion:** the details text blends in and shrinks out like Dynamic Island content, with less bounce opening the window and a little more closing it. Other variants (including the original Tuned motion) are in `MOTIONS` in `config.js`; `MOTION` picks one.
 - **Phone:** below 700px wide the page uses a 390×844 artboard (see `LAYOUTS` in `config.js`).
+- **Card artwork:** each soul's pattern is a shader, drawn by one shared WebGL context and copied into the visible cards: the centre card at the display rate, neighbours at 30fps, far cards at 15fps; hidden cards don't draw. Without WebGL the SVG patterns are used.
 - **Reduced motion:** with the system setting on, the wheel skips its spin-in and idle hint, springs settle without overshoot, the fan doesn't lean, and each card pattern holds still.
 
 The page is designed on a 1440×900 stage (390×844 on phones) and scaled to fit the window; on wide or tall windows the fan and fades run to the real window edges.
@@ -32,6 +33,7 @@ src/
     engine/frame.js                 turns engine state into each element's styles
     engine/writer.js                writes those styles to the DOM, pauses hidden card patterns
     engine/spring.js                spring, easing and ring maths
+    shaders/                        one shared WebGL renderer and a shader per card pattern (SVG patterns are the fallback)
     parts/                          TopBar, DeckToggle, Hero, DeckFlip, CardFan, DetailsSheet, BottomBar, patterns
   data/souls.js                     the MBTI and Enneagram decks
 ```

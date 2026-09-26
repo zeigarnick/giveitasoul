@@ -1,3 +1,5 @@
+import { renderer } from '../shaders/renderer.js';
+
 const kebab = (k) => k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase());
 
 // Writes a frame's styles to the named elements, touching only values that changed since the last write.
@@ -28,14 +30,24 @@ export function createWriter() {
       for (const name in f.st) put(els[name], f.st[name]);
       put(els.pill, f.pillAttr, true);
       f.cardPause.forEach((want, i) => {
+        // shader cards redraw less often the further they are from the centre
+        const cv = els['card' + i] && els['card' + i].querySelector('.slotbtn canvas');
+        if (cv) renderer().setDistance(cv, f.cardDist[i]);
         if (paused[i] === want) return;
-        const svg = els['card' + i] && els['card' + i].querySelector('svg');
+        const el = els['card' + i];
+        // shader cards: the shared renderer skips them while paused (it keeps one clock, so nothing to hand over)
+        const canvas = el && el.querySelector('.slotbtn canvas');
+        if (canvas) { paused[i] = want; renderer().setRunning(canvas, !want); return; }
+        const svg = el && el.querySelector('.slotbtn svg');
         if (!svg) return;
         // the centre card coming back from under the open window carries on from the window's pattern
         if (!want && paused[i] === true && i === f.active && handPattern) handPattern(els.art, els['card' + i]);
         paused[i] = want;
         hold(svg, want, rm);
       });
+      // the open window's shader copy draws only while the window shows
+      const artCanvas = els.art && els.art.querySelector('canvas');
+      if (artCanvas) { renderer().setDistance(artCanvas, 0); renderer().setRunning(artCanvas, f.st.sheet.visibility === 'visible'); }
       if (artPaused !== rm) {
         const svg = els.art && els.art.querySelector('svg');
         if (svg) { artPaused = rm; hold(svg, rm, rm); }

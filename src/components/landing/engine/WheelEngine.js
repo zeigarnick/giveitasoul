@@ -3,6 +3,7 @@ import { FEEL, FACES, LAYOUTS, PHONE_QUERY, MOTIONS, MOTION } from '../config.js
 import { springK, stepSpring, cubicBezier, ringOffset } from './spring.js';
 import { frame } from './frame.js';
 import { createWriter } from './writer.js';
+import { renderer } from '../shaders/renderer.js';
 
 const DECKS = { mbti: MBTI, ennea: ENNEAGRAM };
 // a 9-card deck is laid out twice round the ring so the fan runs to the screen edges like the 16-card one
@@ -19,6 +20,7 @@ export class WheelEngine {
     this.phoneMq = window.matchMedia(PHONE_QUERY);
     this.layout = this.phoneMq.matches ? 'phone' : 'desk';
     this.L = LAYOUTS[this.layout];
+    renderer().setScale(this.L.shaderScale);
     // open/close motion (see MOTIONS); the feel is FEEL with the variant's spring overrides
     this.motion = MOTIONS[MOTION];
     this.feel = { ...FEEL, ...this.motion.feel };
@@ -79,6 +81,7 @@ export class WheelEngine {
     this.onLayout = () => {
       this.layout = this.phoneMq.matches ? 'phone' : 'desk';
       this.L = LAYOUTS[this.layout];
+      renderer().setScale(this.L.shaderScale);
       this.pose = null; this.faceM = []; this.detH = 0; this.soulRect = null; this.rootRect = null;
       this.measureDue = true; this.dirty = true;
       this.emit();

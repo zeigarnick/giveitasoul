@@ -18,7 +18,7 @@ export function frame(e) {
   heroStyles(e, ctx, st);
   const pillAttr = sheetStyles(e, ctx, st);
   const deck = deckStyles(e, st);
-  return { st, pillAttr, cardPause: fan.cardPause, active: fan.active, ...deck, key: [fan.active, deck.from, deck.to, deck.plHint].join('|') };
+  return { st, pillAttr, cardPause: fan.cardPause, cardDist: fan.cardDist, active: fan.active, ...deck, key: [fan.active, deck.from, deck.to, deck.plHint].join('|') };
 }
 
 // The fan: each card on a big hidden wheel. When a card opens, the others drop away; when the deck switches,
@@ -30,10 +30,11 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
   const Lay = e.L, K = Lay.K, R = cfg.radius * K, PX = Lay.W / 2, PY = Lay.PYb + cfg.radius * K, STEP = cfg.spacing;
   const lean = e.rm ? 0 : Math.max(-1, Math.min(1, p.sv / 5)) * cfg.lean;
   const ext = e.ext || 0, exty = e.exty || 0;
-  const cardPause = [];
+  const cardPause = [], cardDist = [];
   for (let i = 0; i < N; i++) {
     const d = ringOffset(i, pos, N);
     const ad = Math.abs(d);
+    cardDist[i] = ad;
     const near = Math.max(0, 1 - ad);
     const isActive = i === active;
     const angDeg = d * STEP + Math.sign(d) * Math.min(1, ad) * (cfg.gap * K / R) * 180 / Math.PI;
@@ -65,7 +66,7 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
     // off the window, invisible, or under the full-strength scrim
     cardPause[i] = e.rm || op < 0.001 || op01 > 0.98 || x < -300 - ext || x > Lay.W + 20 + ext || y > Lay.H + 20 + exty;
   }
-  return { active, cardPause };
+  return { active, cardPause, cardDist };
 }
 
 // Shadows are two layers (Interface Craft, Compositing: Layered Shadows): a tight, darker contact shadow where the
