@@ -483,7 +483,7 @@ export class WheelEngine {
     p.moved = Math.max(p.moved, Math.abs(dx));
     const now = performance.now();
     const dt = Math.max(1, now - p.drag.lt) / 1000;
-    // screen pixels per card: shorter on phones, so a thumb flick covers a few cards
+    // screen pixels per card
     const perCard = this.feel.dragPx * this.L.dragK;
     p.drag.vel = p.drag.vel * 0.3 + (-((e.clientX - p.drag.lx) / perCard) / dt) * 0.7;
     p.drag.lx = e.clientX; p.drag.lt = now;
@@ -529,12 +529,20 @@ export class WheelEngine {
       return;
     }
     if (!p.drag) return;
-    const vel = performance.now() - p.drag.lt > 80 ? 0 : p.drag.vel;
+    let vel = performance.now() - p.drag.lt > 80 ? 0 : p.drag.vel;
     p.drag = null;
-    p.v = vel;
     // iOS-style momentum: land on the card the flick would coast to
     const d = this.feel.decel;
-    p.target = Math.round(p.pos + (vel / 1000) * d / (1 - d));
+    let target = Math.round(p.pos + (vel / 1000) * d / (1 - d));
+    const n = this.L.flick;
+    if (n) {
+      // phones: a flick carries at most n cards past the card under the finger, and hands over no more speed than
+      // that trip needs, so one swipe moves one card and you can pick the one you want
+      target = Math.max(Math.ceil(p.pos) - n, Math.min(Math.floor(p.pos) + n, target));
+      vel = Math.max(-n * 4, Math.min(n * 4, vel));
+    }
+    p.v = vel;
+    p.target = target;
   };
 
   onPointerLeave = () => { this.aim = { x: 0, y: 0, g: 0 }; this.mx = null; this.my = null; this.lastMove = performance.now(); this.onPointerUp(); };
