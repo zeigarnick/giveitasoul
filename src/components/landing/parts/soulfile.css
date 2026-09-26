@@ -15,3 +15,6 @@
 .soulfile-actions .btn-secondary { border: 1px solid #CFC6B6; }
 .soulfile-note { margin-top: 10px; font-size: 12px; line-height: 16px; color: #6B6358; }
 .sheet-actions .btn-primary { border: none; cursor: pointer; font-family: Geist, sans-serif; }
+.soulfile-page { color: #141210; white-space: nowrap; }
+.soulfile-page:hover { color: #4A443C; }
+a.soulfile-back { text-decoration: none; }

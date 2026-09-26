@@ -30,7 +30,8 @@ export function DetailsSheet({ engine, st, pill, soul, L }) {
   const flash = (what) => { setDone(what); clearTimeout(timer.current); timer.current = setTimeout(() => setDone(''), 1600); };
   const stop = (e) => e.stopPropagation();
   const copyFile = async () => { if (await copyText(md)) flash('file'); };
-  const copyLink = async () => { if (await copyText(`${location.origin}/souls/${slug}.md`)) flash('link'); };
+  const page = `/souls/${slug}/`;
+  const copyLink = async () => { if (await copyText(`${location.origin}${page}`)) flash('link'); };
   const download = () => {
     const url = URL.createObjectURL(new Blob([md], { type: 'text/markdown' }));
     const a = document.createElement('a'); a.href = url; a.download = `${slug}.md`; a.click();
@@ -56,7 +57,10 @@ export function DetailsSheet({ engine, st, pill, soul, L }) {
               <button type="button" className="soulfile-back" onClick={() => setView('about')}>← About</button>
             </span>
           ) : (
-            <span ref={engine.bind('d0')} className="sheet-meta" style={st.d0}>{`${soul.anchor} · ${soul.weight}`}</span>
+            <span ref={engine.bind('d0')} className="sheet-meta soulfile-head" style={st.d0}>
+              <span>{`${soul.anchor} · ${soul.weight}`}</span>
+              <a href={page} className="soulfile-back">Soul page ↗</a>
+            </span>
           )}
           <span ref={engine.bind('d1')} className="sheet-name" style={{ fontSize: `${L.nameFs}px`, lineHeight: `${L.nameLh}px`, ...st.d1 }}>{soul.name}</span>
           {file ? (
@@ -69,7 +73,7 @@ export function DetailsSheet({ engine, st, pill, soul, L }) {
                 <button type="button" className="btn-secondary" onClick={copyLink}>{done === 'link' ? 'Link copied' : 'Copy link'}</button>
               </div>
               <span ref={engine.bind('d4')} className="soulfile-note" style={st.d4}>
-                Paste it into your agent's instructions, save it as SOUL.md, or give your agent the link.
+                Paste it into your agent's instructions, save it as SOUL.md, or give your agent the link. <a href={page} className="soulfile-page">Open its page ↗</a>
               </span>
             </>
           ) : (
