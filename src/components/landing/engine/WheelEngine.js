@@ -230,7 +230,9 @@ export class WheelEngine {
     const moving = p.drag || p.gy || p.gd || p.gs || csMoving || p.sink !== 0 || p.sinkv !== 0 || p.tog !== togT || this.swapPending || (this.swapAt && now - this.swapAt < 1500) || p.dy !== 0 || p.dyv !== 0 || p.wdy !== p.dy || p.lift !== 0 || p.liftT !== 0 || p.hov !== hovT || p.v !== 0 || p.ov !== 0 || p.rv !== 0 || p.colv !== 0 || (!open && !this.phaseB) || (open && !this.openB) || (this.openBAt && now - this.openBAt < 950) || now - (this.openAt || -1e9) < 950 || now - (this.closeAt || -1e9) < 250 || Math.abs(p.sv) > 0.001 || p.tx !== aim.x || p.ty !== aim.y || p.gl !== aim.g || fading || glowing;
     // the pointer's heading keeps easing for a moment after it stops, so stay awake a little longer
     const busy = !!(moving || this.dirty || this.measureDue || now - (this.lastMove || -1e9) < 1000);
-    if (moving || this.dirty) { this.dirty = false; this.paint(); }
+    if (moving || this.dirty) { this.resting = false; this.dirty = false; this.paint(); }
+    // one last paint as the wheel comes to rest, so the centre card can be drawn crisp (see frame.js)
+    else if (!busy && !this.resting) { this.resting = true; this.paint(); }
     return busy;
   }
 

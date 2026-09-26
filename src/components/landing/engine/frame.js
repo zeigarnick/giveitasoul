@@ -55,12 +55,20 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
     const sl = Math.max(-0.08, Math.min(1, cst.s / 0.6)), slc = Math.max(0, sl);
     const x = L(wx, ox) - (wx + CARD_W / 2 - PX) * 0.22 * slc, y = L(wy, oy) + 680 * sl;
     const op = isActive ? (sheetOn ? 0 : wop) : wop * (1 - op01);
+    // Crisp text at rest: once the wheel stops, the centre card drops everything that makes the browser draw it as a
+    // stretched bitmap — the GPU layer hint, a flat 3D transform, a no-op filter, half-pixel positions — so its
+    // words are drawn at their real size. While moving, it stays on the GPU for smooth motion.
+    const crisp = isActive && e.resting;
+    const ry = L(wry, 0), turn = isActive ? tilt(p) : '';
+    const flat = Math.abs(ry) < 0.005 && !turn;
+    const bright = 1 - cfg.dim * f * (1 - op01);
     st['card' + i] = {
-      transform: 'translate(' + x.toFixed(1) + 'px, ' + y.toFixed(1) + 'px) rotate(' + (L(wa, oa) + Math.sign(d) * slc * 10 + Math.max(-6, Math.min(6, cst.v * 2.2)) * Math.sign(d)).toFixed(2) + 'deg) perspective(1400px) rotateY(' + L(wry, 0).toFixed(2) + 'deg)' + (isActive ? tilt(p) : '') + ' scale(' + (L(ws, os) * (1 - 0.08 * slc)).toFixed(4) + ')',
+      transform: 'translate(' + (crisp ? Math.round(x) + 'px, ' + Math.round(y) : x.toFixed(1) + 'px, ' + y.toFixed(1)) + 'px) rotate(' + (L(wa, oa) + Math.sign(d) * slc * 10 + Math.max(-6, Math.min(6, cst.v * 2.2)) * Math.sign(d)).toFixed(2) + 'deg)' + (flat ? '' : ' perspective(1400px) rotateY(' + ry.toFixed(2) + 'deg)' + turn) + ' scale(' + (L(ws, os) * (1 - 0.08 * slc)).toFixed(4) + ')',
       opacity: op.toFixed(3),
       zIndex: isActive && op01 > 0.01 ? 120 : 100 - Math.round(ad * 10),
-      filter: 'brightness(' + (1 - cfg.dim * f * (1 - op01)).toFixed(3) + ')',
-      boxShadow: cardShadow(near, cfg)
+      filter: bright > 0.9995 ? 'none' : 'brightness(' + bright.toFixed(3) + ')',
+      boxShadow: cardShadow(near, cfg),
+      willChange: crisp ? 'auto' : 'transform'
     };
     st['glare' + i] = isActive ? glare(p) : NO_GLARE;
     // off the window, invisible, or under the full-strength scrim
@@ -186,7 +194,7 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
   st.sheet = {
     visibility: vis, width: Math.max(1, W).toFixed(1) + 'px', height: Math.max(1, H).toFixed(1) + 'px',
     // carries the card's tilt as it lifts, so a tilted card opens without a jump
-    transform: 'translate(' + (cx - W / 2).toFixed(1) + 'px, ' + (cy - H / 2).toFixed(1) + 'px) rotate(' + L(P0.wa, 0).toFixed(2) + 'deg)' + (p.tx || p.ty ? ' perspective(1400px)' + tilt(p) : '') + ' scale(' + ((1 + sq) * gsc * ls).toFixed(4) + ', ' + ((1 - sq) * gsc * ls).toFixed(4) + ')',
+    transform: 'translate(' + (e.resting ? Math.round(cx - W / 2) + 'px, ' + Math.round(cy - H / 2) : (cx - W / 2).toFixed(1) + 'px, ' + (cy - H / 2).toFixed(1)) + 'px) rotate(' + L(P0.wa, 0).toFixed(2) + 'deg)' + (p.tx || p.ty ? ' perspective(1400px)' + tilt(p) : '') + ' scale(' + ((1 + sq) * gsc * ls).toFixed(4) + ', ' + ((1 - sq) * gsc * ls).toFixed(4) + ')',
     borderRadius: LS(20 * P0.ws, RT).toFixed(1) + 'px',
     // starts as exactly the centre card's shadow (scaled like the card), so handing back to the card is seamless
     boxShadow: sheetShadow(P0, clamp01(m), lift, cfg) + ', 0 0 0 0.5px rgba(20,18,16,' + (0.1 * clamp01(m)).toFixed(3) + ')',
@@ -199,6 +207,9 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
   textStyles(e, open, st);
   return pillAttr;
 }
+
+// no filter at all once the text is sharp: even blur(0px) makes the browser draw it through a filter
+const blurCss = (px) => (px < 0.005 ? 'none' : 'blur(' + px.toFixed(2) + 'px)');
 
 // The details text arrives one line after another once the window has unfolded, and leaves as it folds.
 // "rise": lines ease up 10px out of a blur. "spring": lines blend in from a little smaller, out of a blur, on a
@@ -214,10 +225,10 @@ function textStyles(e, open, st) {
       k = T.kind === 'rise' ? 1 - Math.pow(1 - clamp01(t / T.dur), 3) : (t > 0 ? springAt(t / 1000, T.response, T.damping) : 0);
     } else k = Math.min(1 - clamp01((tn - (e.closeAt || 0)) / X.dur), colF);
     if (T.kind === 'rise') {
-      st['d' + i] = { opacity: k.toFixed(3), transform: 'translateY(' + ((1 - k) * T.rise).toFixed(1) + 'px)', filter: 'blur(' + ((1 - k) * T.blur).toFixed(2) + 'px)', transformOrigin: '50% 50%' };
+      st['d' + i] = { opacity: k.toFixed(3), transform: 'translateY(' + ((1 - k) * T.rise).toFixed(1) + 'px)', filter: blurCss((1 - k) * T.blur), transformOrigin: '50% 50%' };
     } else {
       const s0 = open ? T.scale : X.scale, b0 = open ? T.blur : X.blur;
-      st['d' + i] = { opacity: clamp01(k).toFixed(3), transform: 'scale(' + (s0 + (1 - s0) * k).toFixed(4) + ')', filter: 'blur(' + (Math.max(0, 1 - k) * b0).toFixed(2) + 'px)', transformOrigin: '0% 50%' };
+      st['d' + i] = { opacity: clamp01(k).toFixed(3), transform: 'scale(' + (s0 + (1 - s0) * k).toFixed(4) + ')', filter: blurCss(Math.max(0, 1 - k) * b0), transformOrigin: '0% 50%' };
     }
     if (i === 0) st.closeBtn = { opacity: clamp01(k).toFixed(3) };
   }
