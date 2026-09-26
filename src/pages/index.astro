@@ -41,6 +41,9 @@ const description = 'Pick a personality for your personal AI agent. Spin through
         function fit() {
           var s = Math.min(window.innerWidth / 1440, window.innerHeight / 900);
           stage.style.setProperty('--s', String(s));
+          // how far the window extends past the 1440x900 artboard, in artboard pixels
+          stage.style.setProperty('--ext', String(Math.max(0, (window.innerWidth / s - 1440) / 2)));
+          stage.style.setProperty('--exty', String(Math.max(0, (window.innerHeight / s - 900) / 2)));
         }
         fit();
         window.addEventListener('resize', fit);

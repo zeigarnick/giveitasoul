@@ -233,7 +233,7 @@ export default class Landing extends DCLogic {
       const ws = (1 + (cfg.scale - 1) * e) * (1 - (1 - cfg.sideScale) * ds);
       const wry = Math.sign(d) * Math.min(1, ad) * cfg.turn;
       const f = this.fv ? this.fv[i] : this.bez(Math.min(1, ad / cfg.fadeRange));
-      const wop = ad < 7.4 ? 1 : 0;
+      const wop = ad < N / 2 - 0.45 ? 1 : 0;
       let ox, oy, oa, os, oop;
       if (isActive) { this.pose = { wx, wy, wa, ws }; ox = wx; oy = wy; oa = wa; os = ws; oop = 0; } else { ox = wx; oy = wy + cfg.drop; oa = wa; os = 0.92; oop = 0; }
       const m = restE;
@@ -675,7 +675,7 @@ export default class Landing extends DCLogic {
 
   template(v) {
     return (
-    <div className="wheel" ref={v.rootRef} tabIndex="0" onPointerDown={v.down} onPointerMove={v.move} onPointerUp={v.up} onPointerLeave={v.leave} onWheel={v.wheel} onKeyDown={v.key} style={{ "width": "1440px", "height": "900px", "position": "relative", "overflow": "hidden", "background": "#F4F0E8" }}>
+    <div className="wheel" ref={v.rootRef} tabIndex="0" onPointerDown={v.down} onPointerMove={v.move} onPointerUp={v.up} onPointerLeave={v.leave} onWheel={v.wheel} onKeyDown={v.key} style={{ "width": "1440px", "height": "900px", "position": "relative", "clipPath": "inset(calc(var(--exty, 0) * -1px) calc(var(--ext, 0) * -1px))", "background": "#F4F0E8" }}>
       <nav style={{ "position": "absolute", "left": "0", "top": "0", "width": "1440px", "boxSizing": "border-box", "padding": "28px 56px", "display": "flex", "justifyContent": "space-between", "alignItems": "center", "zIndex": "200" }}>
         <a href="#" aria-label="giveitasoul home" style={{ "position": "relative", "display": "flex", "alignItems": "baseline", "fontFamily": "'Instrument Serif', Georgia, serif", "fontSize": "28px", "letterSpacing": "-0.03em", "textDecoration": "none", "color": "#141210" }}>
           {"give"}
@@ -767,7 +767,7 @@ export default class Landing extends DCLogic {
           </div>
         </React.Fragment>
       ))}
-      <span onClick={v.close} style={{ "position": "absolute", "left": "0", "top": "0", "width": "1440px", "height": "900px", "zIndex": "140", "background": `rgba(244,240,232,${v.scrimA})`, "backdropFilter": `blur(${v.scrimBlur}px)`, "WebkitBackdropFilter": `blur(${v.scrimBlur}px)`, "pointerEvents": v.panelPe, "visibility": v.sheetVis }} />
+      <span onClick={v.close} style={{ "position": "absolute", "left": "calc(var(--ext, 0) * -1px)", "top": "calc(var(--exty, 0) * -1px)", "width": "calc(1440px + var(--ext, 0) * 2px)", "height": "calc(900px + var(--exty, 0) * 2px)", "zIndex": "140", "background": `rgba(244,240,232,${v.scrimA})`, "backdropFilter": `blur(${v.scrimBlur}px)`, "WebkitBackdropFilter": `blur(${v.scrimBlur}px)`, "pointerEvents": v.panelPe, "visibility": v.sheetVis }} />
       <svg width="1440" height="900" viewBox="0 0 1440 900" fill="none" style={{ "position": "absolute", "left": "0", "top": "0", "zIndex": "160", "pointerEvents": "none" }}>
         <path d={v.pillD} stroke="#141210" strokeOpacity={v.pillO} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
@@ -812,8 +812,8 @@ export default class Landing extends DCLogic {
           </svg>
         </button>
       </div>
-      <div style={{ "position": "absolute", "left": "0", "top": "0", "width": "280px", "height": "900px", "background": "linear-gradient(90deg, rgba(244,240,232,0.92) 0%, rgba(244,240,232,0.8) 14%, rgba(244,240,232,0.58) 32%, rgba(244,240,232,0.34) 52%, rgba(244,240,232,0.13) 74%, rgba(244,240,232,0) 100%)", "zIndex": "125", "pointerEvents": "none" }} />
-      <div style={{ "position": "absolute", "right": "0", "top": "0", "width": "280px", "height": "900px", "background": "linear-gradient(270deg, rgba(244,240,232,0.92) 0%, rgba(244,240,232,0.8) 14%, rgba(244,240,232,0.58) 32%, rgba(244,240,232,0.34) 52%, rgba(244,240,232,0.13) 74%, rgba(244,240,232,0) 100%)", "zIndex": "125", "pointerEvents": "none" }} />
+      <div style={{ "position": "absolute", "left": "calc(var(--ext, 0) * -1px)", "top": "calc(var(--exty, 0) * -1px)", "width": "280px", "height": "calc(900px + var(--exty, 0) * 2px)", "background": "linear-gradient(90deg, rgba(244,240,232,0.92) 0%, rgba(244,240,232,0.8) 14%, rgba(244,240,232,0.58) 32%, rgba(244,240,232,0.34) 52%, rgba(244,240,232,0.13) 74%, rgba(244,240,232,0) 100%)", "zIndex": "125", "pointerEvents": "none" }} />
+      <div style={{ "position": "absolute", "right": "calc(var(--ext, 0) * -1px)", "top": "calc(var(--exty, 0) * -1px)", "width": "280px", "height": "calc(900px + var(--exty, 0) * 2px)", "background": "linear-gradient(270deg, rgba(244,240,232,0.92) 0%, rgba(244,240,232,0.8) 14%, rgba(244,240,232,0.58) 32%, rgba(244,240,232,0.34) 52%, rgba(244,240,232,0.13) 74%, rgba(244,240,232,0) 100%)", "zIndex": "125", "pointerEvents": "none" }} />
       <div style={{ "position": "absolute", "left": "0", "bottom": "34px", "width": "1440px", "display": "flex", "justifyContent": "center", "alignItems": "center", "gap": "16px", "opacity": v.heroOp, "zIndex": "200" }}>
         <button type="button" aria-label="Previous soul" onClick={v.prev} style={{ "width": "44px", "height": "44px", "borderRadius": "50%", "border": "1.5px solid #CFC6B6", "background": "#F4F0E8", "cursor": "pointer", "display": "flex", "alignItems": "center", "justifyContent": "center" }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#141210" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
