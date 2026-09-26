@@ -19,7 +19,7 @@ export class WheelEngine {
     this.phoneMq = window.matchMedia(PHONE_QUERY);
     this.layout = this.phoneMq.matches ? 'phone' : 'desk';
     this.L = LAYOUTS[this.layout];
-    let motion = 'tuned';
+    let motion = 'islandBounce';
     try { const m = localStorage.getItem('giveitasoul.motion'); if (MOTIONS[m]) motion = m; } catch (err) {}
     this.useMotion(motion);
     this.open = false;

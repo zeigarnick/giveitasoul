@@ -42,7 +42,8 @@ export const LAYOUTS = {
 };
 export const PHONE_QUERY = '(max-width: 700px)';
 
-// Open/close motion variants, switchable live with the motion picker (dev, or ?motion in the URL).
+// Open/close motion variants, switchable live with the motion picker (dev, or ?motion in the URL). Island+ is the
+// default; Tuned is the original hand-tuned motion.
 // `text` is how the details text arrives, `exit` how it leaves on close, `feel` overrides springs in FEEL.
 // The Island variants follow Emil Kowalski's Dynamic Island morph (animations.dev, 06 Dynamic Island): new content
 // blends in from scale 0.9–1 with a 5px blur and a 50ms delay on a spring, old content shrinks and blurs out with its
