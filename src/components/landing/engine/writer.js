@@ -24,13 +24,15 @@ export function createWriter() {
   };
 
   return {
-    write(els, f, rm) {
+    write(els, f, rm, handPattern) {
       for (const name in f.st) put(els[name], f.st[name]);
       put(els.pill, f.pillAttr, true);
       f.cardPause.forEach((want, i) => {
         if (paused[i] === want) return;
         const svg = els['card' + i] && els['card' + i].querySelector('svg');
         if (!svg) return;
+        // the centre card coming back from under the open window carries on from the window's pattern
+        if (!want && paused[i] === true && i === f.active && handPattern) handPattern(els.art, els['card' + i]);
         paused[i] = want;
         hold(svg, want, rm);
       });

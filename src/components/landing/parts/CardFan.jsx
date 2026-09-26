@@ -5,7 +5,7 @@ import SoulCard from '../SoulCard.jsx';
 export function CardFan({ engine, st, souls }) {
   return souls.map((s, i) => (
     <div key={i} ref={engine.bind('card' + i)} className="fancard" style={st['card' + i]}>
-      <button type="button" className="slotbtn" aria-label={s.name} onClick={() => engine.cardClick(i)}>
+      <button type="button" className="slotbtn" aria-label={s.name} onClick={() => engine.cardClick(i)} onFocus={(e) => engine.cardFocus(i, e)}>
         <SoulCard s={s} />
       </button>
     </div>

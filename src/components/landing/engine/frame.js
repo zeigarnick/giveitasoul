@@ -48,7 +48,7 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
     const wop = ad < N / 2 - 0.45 ? 1 : 0;
     // where the card goes while another one is open: the centre stays put, the rest drop and shrink
     let ox, oy, oa, os;
-    if (isActive) { e.pose = { wx, wy, wa, ws }; ox = wx; oy = wy; oa = wa; os = ws; } else { ox = wx; oy = wy + cfg.drop; oa = wa; os = 0.92 * K; }
+    if (isActive) { e.pose = { wx, wy, wa, ws, near }; ox = wx; oy = wy; oa = wa; os = ws; } else { ox = wx; oy = wy + cfg.drop; oa = wa; os = 0.92 * K; }
     const L = (a, b) => a + (b - a) * restE;
     const cst = e.cs && e.cs[i] ? e.cs[i] : { s: 0, v: 0 };
     const sl = Math.max(-0.08, Math.min(1, cst.s / 0.6)), slc = Math.max(0, sl);
@@ -59,12 +59,28 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
       opacity: op.toFixed(3),
       zIndex: isActive && op01 > 0.01 ? 120 : 100 - Math.round(ad * 10),
       filter: 'brightness(' + (1 - cfg.dim * f * (1 - op01)).toFixed(3) + ')',
-      boxShadow: '0 ' + Math.round(18 + 14 * near) + 'px ' + Math.round(34 + 20 * near) + 'px -18px rgba(20,18,16,' + (cfg.shadow * (0.35 + 0.65 * near)).toFixed(3) + ')'
+      boxShadow: cardShadow(near, cfg)
     };
     // off the window, invisible, or under the full-strength scrim
     cardPause[i] = e.rm || op < 0.001 || op01 > 0.98 || x < -300 - ext || x > Lay.W + 20 + ext || y > Lay.H + 20 + exty;
   }
   return { active, cardPause };
+}
+
+// A fan card's shadow: deeper and darker the nearer it is to the centre (near 0..1).
+function shadowParts(near, cfg) {
+  return { y: Math.round(18 + 14 * near), blur: Math.round(34 + 20 * near), spread: -18, a: cfg.shadow * (0.35 + 0.65 * near) };
+}
+function cardShadow(near, cfg) {
+  const s = shadowParts(near, cfg);
+  return '0 ' + s.y + 'px ' + s.blur + 'px ' + s.spread + 'px rgba(20,18,16,' + s.a.toFixed(3) + ')';
+}
+// The details window's shadow: the centre card's shadow in window pixels (the card's is scaled by its transform)
+// at m = 0, growing to the open window's larger, softer shadow at m = 1.
+function sheetShadow(P0, m, cfg) {
+  const s = shadowParts(P0.near, cfg), k = P0.ws;
+  const L = (a, b) => a + (b - a) * m;
+  return '0 ' + L(s.y * k, 50).toFixed(1) + 'px ' + L(s.blur * k, 110).toFixed(1) + 'px ' + L(s.spread * k, -24).toFixed(1) + 'px rgba(20,18,16,' + L(s.a, 0.32).toFixed(3) + ')';
 }
 
 // The hero line fades up as a card opens. Its word "soul" takes the typeface the pointer points at and warms with
@@ -96,7 +112,7 @@ function heroStyles(e, { op01 }, st) {
 function sheetStyles(e, { open, restE, sheetOn }, st) {
   const p = e.p, cfg = e.feel;
   const m = p.open;
-  const P0 = e.pose || { wx: 604, wy: 458, wa: 0, ws: 1 };
+  const P0 = e.pose || { wx: 604, wy: 458, wa: 0, ws: 1, near: 1 };
   const W0 = CARD_W * P0.ws, H0 = CARD_H * P0.ws, cx0 = P0.wx + CARD_W / 2, cy0 = P0.wy + CARD_H / 2;
   const Lay = e.L, { row, PAD, GAP, ART } = Lay.sheet;
   const cardW = CARD_W * ART, cardH = CARD_H * ART;
@@ -145,7 +161,8 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
     visibility: vis, width: Math.max(1, W).toFixed(1) + 'px', height: Math.max(1, H).toFixed(1) + 'px',
     transform: 'translate(' + (cx - W / 2).toFixed(1) + 'px, ' + (cy - H / 2).toFixed(1) + 'px) rotate(' + L(P0.wa, 0).toFixed(2) + 'deg) scale(' + ((1 + sq) * gsc).toFixed(4) + ', ' + ((1 - sq) * gsc).toFixed(4) + ')',
     borderRadius: LS(20 * P0.ws, RT).toFixed(1) + 'px',
-    boxShadow: '0 ' + Math.round(L(24, 50)) + 'px ' + Math.round(L(40, 110)) + 'px -24px rgba(20,18,16,' + L(0.25, 0.32).toFixed(3) + '), 0 0 0 0.5px rgba(20,18,16,' + (0.1 * clamp01(m)).toFixed(3) + ')',
+    // starts as exactly the centre card's shadow (scaled like the card), so handing back to the card is seamless
+    boxShadow: sheetShadow(P0, clamp01(m), cfg) + ', 0 0 0 0.5px rgba(20,18,16,' + (0.1 * clamp01(m)).toFixed(3) + ')',
     pointerEvents: pe
   };
   st.art = { left: LS(0, artXT).toFixed(1) + 'px', top: LS(0, artYT).toFixed(1) + 'px', transform: 'scale(' + LS(P0.ws, ART).toFixed(4) + ')', boxShadow: '0 18px 40px -22px rgba(20,18,16,' + (0.35 * clamp01(m)).toFixed(3) + ')' };

@@ -64,7 +64,7 @@ export class WheelEngine {
   // React just wrote its own copy of the styles and may have swapped card artwork: forget what we wrote, write it again
   afterCommit() {
     this.writer.reset();
-    this.writer.write(this.els, this.frame(), this.rm);
+    this.writer.write(this.els, this.frame(), this.rm, this.handPattern);
     this.measureDue = true;
     this.wake();
   }
@@ -123,7 +123,7 @@ export class WheelEngine {
   }
   paint() {
     const f = this.frame();
-    this.writer.write(this.els, f, this.rm);
+    this.writer.write(this.els, f, this.rm, this.handPattern);
     if (f.key !== this.key) { this.key = f.key; this.emit(); }
   }
 
@@ -205,6 +205,10 @@ export class WheelEngine {
     const liveV = p.drag ? p.drag.vel : p.v;
     p.sv += (liveV - p.sv) * Math.min(1, dt * 14);
 
+    if (this.pendingOpen != null && !open) {
+      const N = this.souls.length;
+      if (((Math.round(p.pos) % N) + N) % N === this.pendingOpen) { this.pendingOpen = null; this.setOpen(true); }
+    }
     const csMoving = this.stepChain(n, h);
     const fading = this.stepFade(dt);
     this.measure();
@@ -325,13 +329,31 @@ export class WheelEngine {
   };
   setOpen(v) {
     if (this.open === v) return;
+    if (v) this.handPattern(this.els['card' + this.activeIndex()], this.els.art);
     this.open = v;
     this.emit();
     this.wake();
   }
   // closing by tap is ignored right after a drag-to-dismiss, whose release lands on the scrim
   close = () => { if (performance.now() - (this.gEnd || 0) < 350) return; this.setOpen(false); };
-  step(by) { this.p.target = Math.round(this.p.target) + by; this.dirty = true; this.wake(); }
+  step(by) { this.pendingOpen = null; this.p.target = Math.round(this.p.target) + by; this.dirty = true; this.wake(); }
+  activeIndex() { const N = this.souls.length; return ((Math.round(this.p.pos) % N) + N) % N; }
+  // The wheel card and the open window each draw the soul's pattern; hand the animation's time from one to the
+  // other so the pattern carries on instead of restarting.
+  handPattern = (fromEl, toEl) => {
+    const a = fromEl && fromEl.querySelector('svg'), b = toEl && toEl.querySelector('svg');
+    if (a && b && !this.rm) b.setCurrentTime(a.getCurrentTime());
+  }
+  // the card the wheel is heading for
+  targetIndex() { const N = this.souls.length; return ((Math.round(this.p.target) % N) + N) % N; }
+  focusCard(i) { const b = this.els['card' + i] && this.els['card' + i].querySelector('.slotbtn'); if (b) b.focus({ preventScroll: true }); }
+  // bring card i to the centre by the shortest way round
+  centre(i) { this.step(Math.round(ringOffset(i, Math.round(this.p.target), this.souls.length))); }
+  // keyboard focus (Tab) spins the focused card to the centre, so Enter opens what the focus ring shows
+  cardFocus(i, e) {
+    if (this.open || !e.target.matches(':focus-visible')) return;
+    if (i !== this.targetIndex()) this.centre(i);
+  }
   prev = () => this.step(-1);
   next = () => this.step(1);
   pickDeck(to) {
@@ -343,8 +365,10 @@ export class WheelEngine {
   cardClick(i) {
     const p = this.p, N = this.souls.length;
     if (p.moved > 6 || this.open || (p.sink || 0) > 0.01 || this.swapPending) return;
+    if (i !== this.targetIndex()) { this.centre(i); return; }
+    // it's the card the wheel is settling on: open now, or as soon as it reaches the centre
     if (i === ((Math.round(p.pos) % N) + N) % N) this.setOpen(true);
-    else this.step(Math.round(ringOffset(i, p.pos, N)));
+    else { this.pendingOpen = i; this.wake(); }
   }
 
   // ---- Gestures -----------------------------------------------------------------------------------------------
@@ -356,6 +380,7 @@ export class WheelEngine {
 
   onPointerDown = (e) => {
     const p = this.p;
+    this.pendingOpen = null;
     this.lastInput = performance.now();
     this.wake();
     if (this.open) {
@@ -500,6 +525,7 @@ export class WheelEngine {
     this.lastInput = performance.now();
     // a trackpad pinch arrives as ctrl+wheel: that's a zoom, not a spin
     if (this.open || e.ctrlKey) return;
+    this.pendingOpen = null;
     // Firefox can report whole lines or pages instead of pixels
     const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 900 : 1;
     p.target += (e.deltaY + e.deltaX) * unit / this.feel.wheelPx;
@@ -512,8 +538,13 @@ export class WheelEngine {
   onKeyDown = (e) => {
     this.lastInput = performance.now();
     this.wake();
-    if (e.key === 'ArrowRight') this.step(1);
-    else if (e.key === 'ArrowLeft') this.step(-1);
+    // Enter or Space on a focused card is that card's own click
+    if ((e.key === 'Enter' || e.key === ' ') && e.target !== this.els.root) return;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      this.step(e.key === 'ArrowRight' ? 1 : -1);
+      // keep keyboard focus on the card that is heading for the centre
+      if (e.target !== this.els.root) this.focusCard(this.targetIndex());
+    }
     else if (e.key === 'Enter' && !this.open) this.setOpen(true);
     else if (e.key === 'Escape' && this.open) this.setOpen(false);
   };
