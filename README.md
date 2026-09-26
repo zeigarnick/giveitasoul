@@ -13,7 +13,7 @@ Built with [Astro](https://astro.build) and one React island (`src/components/la
 - **Idle hint:** when nothing has been touched for a while, the centre card lifts a little to suggest swiping up.
 - **Open/close motion:** the details text blends in and shrinks out like Dynamic Island content, with less bounce opening the window and a little more closing it. Other variants (including the original Tuned motion) are in `MOTIONS` in `config.js`; `MOTION` picks one.
 - **Phone:** below 700px wide the page uses a 390×844 artboard (see `LAYOUTS` in `config.js`), with the centre card the size of Interface Craft's (300×420 on a 390×844 phone), and a flick moves one card at a time.
-- **Card artwork:** each soul's pattern is a shader, drawn by one shared WebGL context and copied into the visible cards: the centre card at the display rate, neighbours at 30fps, far cards at 15fps; hidden cards don't draw. Without WebGL the SVG patterns are used.
+- **Card artwork:** each soul's pattern is a shader, drawn by one shared WebGL context and copied into the visible cards: the centre card at up to 60fps, neighbours at 30fps, far cards (and the whole fan while a soul is open) at 15fps; hidden cards don't draw. Without WebGL, or with `?art=svg` in the URL, the SVG patterns are used.
 - **Reduced motion:** with the system setting on, the wheel skips its spin-in and idle hint, springs settle without overshoot, the fan doesn't lean, and each card pattern holds still.
 
 The page is designed on a 1440×900 stage (390×844 on phones) and scaled to fit the window; on wide or tall windows the fan and fades run to the real window edges.

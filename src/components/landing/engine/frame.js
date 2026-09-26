@@ -35,7 +35,8 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
   for (let i = 0; i < N; i++) {
     const d = ringOffset(i, pos, N);
     const ad = Math.abs(d);
-    cardDist[i] = ad;
+    // while a window opens, is open or closes, the fan sits under the frosted scrim: its cards redraw at the far rate
+    cardDist[i] = op01 > 0.001 && i !== active ? Math.max(ad, 3) : ad;
     const near = Math.max(0, 1 - ad);
     const isActive = i === active;
     const angDeg = d * STEP + Math.sign(d) * Math.min(1, ad) * (cfg.gap * K / R) * 180 / Math.PI;

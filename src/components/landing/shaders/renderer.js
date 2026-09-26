@@ -10,9 +10,9 @@ const hex = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255);
 // Resolution relative to card pixels, never above the screen's own density. The wheel sets it per layout: phone
 // cards are shown large, desktop ones small.
 const clampScale = (s) => Math.max(1, Math.min(s, window.devicePixelRatio || 1));
-// the centre card and the open window redraw at the display rate; neighbours at 30fps, far cards (small and
-// dimmed) at 15fps
-const frameMs = (dist) => (dist < 0.5 ? 0 : dist <= 2.5 ? 1000 / 30 - 2 : 1000 / 15 - 2);
+// the centre card and the open window redraw at up to 60fps (not 120 on ProMotion phones: the patterns move slowly,
+// and it halves their cost); neighbours at 30fps, far cards (small and dimmed) at 15fps
+const frameMs = (dist) => (dist < 0.5 ? 1000 / 60 - 2 : dist <= 2.5 ? 1000 / 30 - 2 : 1000 / 15 - 2);
 
 class ShaderRenderer {
   constructor() {
@@ -32,6 +32,8 @@ class ShaderRenderer {
   }
 
   init() {
+    // ?art=svg draws the SVG patterns instead, to compare performance on a device
+    if (new URLSearchParams(location.search).get('art') === 'svg') { this.ok = false; return; }
     const canvas = document.createElement('canvas');
     this.size(canvas);
     const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: false, powerPreference: 'low-power' });
