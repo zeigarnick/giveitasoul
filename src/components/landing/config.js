@@ -42,33 +42,31 @@ export const LAYOUTS = {
 };
 export const PHONE_QUERY = '(max-width: 700px)';
 
-// Open/close motion variants, switchable live with the motion picker (dev, or ?motion in the URL). Island+ is the
-// default; Tuned is the original hand-tuned motion.
+// Open/close motion variants; MOTION picks the one in use. Tuned is the original hand-tuned motion.
 // `text` is how the details text arrives, `exit` how it leaves on close, `feel` overrides springs in FEEL.
 // The Island variants follow Emil Kowalski's Dynamic Island morph (animations.dev, 06 Dynamic Island): new content
 // blends in from scale 0.9–1 with a 5px blur and a 50ms delay on a spring, old content shrinks and blurs out with its
 // shrinking container, and bigger views get less bounce than small ones.
 export const MOTIONS = {
   tuned: {
-    label: 'Tuned',
     text: { kind: 'rise', delay: 120, stagger: 50, dur: 420, rise: 10, blur: 4 },
     exit: { dur: 110, scale: 1, blur: 4 },
     feel: {}
   },
   island: {
-    label: 'Island',
     text: { kind: 'spring', delay: 50, stagger: 40, response: 0.5, damping: 0.82, scale: 0.94, blur: 5 },
     exit: { dur: 160, scale: 0.94, blur: 5 },
     feel: {}
   },
   islandBounce: {
-    label: 'Island+',
     text: { kind: 'spring', delay: 50, stagger: 40, response: 0.5, damping: 0.82, scale: 0.94, blur: 5 },
     exit: { dur: 160, scale: 0.94, blur: 5 },
     // the window is big, so less bounce opening; it shrinks back to a small card, so a little more closing
     feel: { mDamp: 0.84, mCloseDamp: 0.7 }
   }
 };
+
+export const MOTION = 'islandBounce';
 
 export const DECK_LABELS = { mbti: ['MBTI', '16 SOULS'], ennea: ['Enneagram', '9 SOULS'] };
 

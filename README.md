@@ -11,7 +11,7 @@ Built with [Astro](https://astro.build) and one React island (`src/components/la
 - **Close:** pull the window down by its pill (or anywhere on it), tap outside, or press Esc.
 - **Switch deck:** use the MBTI / Enneagram toggle, or pull the fan down. The cards drape down on a chain of springs, the deck name flips over, and the other deck rises.
 - **Idle hint:** when nothing has been touched for a while, the centre card lifts a little to suggest swiping up.
-- **Motion variants:** in dev, or with `?motion` in the URL, a small picker switches the open/close motion between Island+ (the default: details text blends in and shrinks out like Dynamic Island content, with less bounce opening the window and a little more closing it), Island (the same without the bounce change) and Tuned (the original motion). Picking one replays the open; the choice is remembered in this browser. Variants live in `MOTIONS` in `config.js`.
+- **Open/close motion:** the details text blends in and shrinks out like Dynamic Island content, with less bounce opening the window and a little more closing it. Other variants (including the original Tuned motion) are in `MOTIONS` in `config.js`; `MOTION` picks one.
 - **Phone:** below 700px wide the page uses a 390×844 artboard (see `LAYOUTS` in `config.js`).
 - **Reduced motion:** with the system setting on, the wheel skips its spin-in and idle hint, springs settle without overshoot, the fan doesn't lean, and each card pattern holds still.
 
@@ -32,7 +32,7 @@ src/
     engine/frame.js                 turns engine state into each element's styles
     engine/writer.js                writes those styles to the DOM, pauses hidden card patterns
     engine/spring.js                spring, easing and ring maths
-    parts/                          TopBar, DeckToggle, Hero, DeckFlip, CardFan, DetailsSheet, BottomBar, MotionPicker, patterns
+    parts/                          TopBar, DeckToggle, Hero, DeckFlip, CardFan, DetailsSheet, BottomBar, patterns
   data/souls.js                     the MBTI and Enneagram decks
 ```
 

@@ -1,5 +1,5 @@
 import { MBTI, ENNEAGRAM } from '../../../data/souls.js';
-import { FEEL, FACES, LAYOUTS, PHONE_QUERY, MOTIONS } from '../config.js';
+import { FEEL, FACES, LAYOUTS, PHONE_QUERY, MOTIONS, MOTION } from '../config.js';
 import { springK, stepSpring, cubicBezier, ringOffset } from './spring.js';
 import { frame } from './frame.js';
 import { createWriter } from './writer.js';
@@ -19,13 +19,13 @@ export class WheelEngine {
     this.phoneMq = window.matchMedia(PHONE_QUERY);
     this.layout = this.phoneMq.matches ? 'phone' : 'desk';
     this.L = LAYOUTS[this.layout];
-    let motion = 'islandBounce';
-    try { const m = localStorage.getItem('giveitasoul.motion'); if (MOTIONS[m]) motion = m; } catch (err) {}
-    this.useMotion(motion);
+    // open/close motion (see MOTIONS); the feel is FEEL with the variant's spring overrides
+    this.motion = MOTIONS[MOTION];
+    this.feel = { ...FEEL, ...this.motion.feel };
     this.open = false;
     this.deck = 'mbti';
     this.key = '';
-    this.snapshot = { open: false, deck: 'mbti', key: '', layout: this.layout, motion: this.motionName };
+    this.snapshot = { open: false, deck: 'mbti', key: '', layout: this.layout };
     this.listeners = new Set();
     this.p = { pos: this.rm ? 0 : -4, v: 0, target: 0, drag: null, moved: 0, open: 0, ov: 0, rest: 0, rv: 0, sv: 0, last: 0 };
     this.souls = ring('mbti');
@@ -47,7 +47,7 @@ export class WheelEngine {
   subscribe = (fn) => { this.listeners.add(fn); return () => this.listeners.delete(fn); };
   getSnapshot = () => this.snapshot;
   emit() {
-    this.snapshot = { open: this.open, deck: this.deck, key: this.key, layout: this.layout, motion: this.motionName };
+    this.snapshot = { open: this.open, deck: this.deck, key: this.key, layout: this.layout };
     this.listeners.forEach((fn) => fn());
   }
   // a stable ref callback per element name
@@ -93,7 +93,7 @@ export class WheelEngine {
   }
   unmount() {
     cancelAnimationFrame(this.raf); this.raf = 0;
-    clearTimeout(this.wt); clearTimeout(this.replayT); clearTimeout(this.sleepT);
+    clearTimeout(this.wt); clearTimeout(this.sleepT);
     this.mq.removeEventListener('change', this.onRm);
     this.phoneMq.removeEventListener('change', this.onLayout);
     window.removeEventListener('resize', this.onResize);
@@ -311,22 +311,6 @@ export class WheelEngine {
 
   // ---- Actions ------------------------------------------------------------------------------------------------
 
-  // open/close motion variant (see MOTIONS); the feel is FEEL with the variant's spring overrides
-  useMotion(name) {
-    this.motionName = name;
-    this.motion = MOTIONS[name];
-    this.feel = { ...FEEL, ...this.motion.feel };
-  }
-  // switch variant from the motion picker and replay the open so it can be compared
-  setMotion = (name) => {
-    if (!MOTIONS[name] || name === this.motionName) return;
-    this.useMotion(name);
-    try { localStorage.setItem('giveitasoul.motion', name); } catch (err) {}
-    this.emit();
-    clearTimeout(this.replayT);
-    if (this.open) { this.setOpen(false); this.replayT = setTimeout(() => this.setOpen(true), 700); }
-    else if (!this.swapPending && !this.p.drag) this.setOpen(true);
-  };
   setOpen(v) {
     if (this.open === v) return;
     if (v) this.handPattern(this.els['card' + this.activeIndex()], this.els.art);
