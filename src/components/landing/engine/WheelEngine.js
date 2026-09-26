@@ -139,7 +139,9 @@ export class WheelEngine {
     const dt = Math.max(0, Math.min(0.05, (now - p.last) / 1000));
     p.last = now;
     // reduced motion: no overshoot anywhere
-    const wheelS = springK(cfg.response, rm ? Math.max(1, cfg.damping) : cfg.damping);
+    // phones override the spin spring so the fan snaps onto a card rather than swinging past it
+    const spin = { response: cfg.response, damping: cfg.damping, ...this.L.spin };
+    const wheelS = springK(spin.response, rm ? Math.max(1, spin.damping) : spin.damping);
     const openS = open ? springK(cfg.mResp, rm ? 1 : cfg.mDamp) : springK(cfg.mClose, rm ? 1 : cfg.mCloseDamp);
     const n = Math.max(1, Math.ceil(dt / (1 / 240))), h = dt / n;
 

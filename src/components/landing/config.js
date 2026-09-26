@@ -28,7 +28,8 @@ export const GLOW = [[198, 43, 39], [224, 80, 26], [156, 111, 0], [95, 122, 14],
 // K sizes the whole fan (cards, radius, gap, lift) together; PYb + radius·K is the wheel's hidden centre.
 // Phone cards match Interface Craft's front card on a 390px phone (300×420); dragK keeps a drag 1:1 with the
 // on-screen card spacing.
-// flick caps how many cards a flick can carry past the one under the finger (phone only).
+// flick caps how many cards a flick can carry past the one under the finger, and spin overrides the fan's spring
+// (both phone only).
 export const LAYOUTS = {
   desk: {
     W: 1440, H: 900, K: 0.86, PYb: 616, heroTop: 156, heroPad: 0, h1: 72, h1Lh: 1, sub: 18, navPad: '28px 56px', logo: 28,
@@ -41,7 +42,7 @@ export const LAYOUTS = {
   phone: {
     W: 390, H: 844, K: 1.17, PYb: 530, heroTop: 112, heroPad: 24, h1: 46, h1Lh: 1.02, sub: 15, navPad: '18px 20px', logo: 24,
     tgTop: 16, tgW0: 76, tgW1: 112, tgFs: 13, tgRight: 20, label: 372, fade: 48, bottom: 28, counterW: 72,
-    hint: '', dragK: 1.04, flick: 1, nearY: 270,
+    hint: '', dragK: 1.04, flick: 1, spin: { response: 0.55, damping: 0.95 }, nearY: 270,
     sheet: { row: false, PAD: 24, GAP: 20, ART: 0.8, cy: 440 }, nameFs: 34, nameLh: 38,
     shaderScale: 2.5
   }
