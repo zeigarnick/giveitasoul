@@ -66,7 +66,9 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
     const w = lerp(f.w, t.w, g), h = lerp(f.h, t.h, g);
     const on = p > 0.001;
     Object.assign(panel.current.style, {
-      visibility: on ? 'visible' : 'hidden',
+      // 'inherit', never 'visible': a child set to visible shows even inside a hidden parent, so the flip (and its
+      // copy of the card) would stay on screen after flipping home or while the window closes
+      visibility: on ? 'inherit' : 'hidden',
       left: lerp(f.x, t.x, g) + 'px', top: lerp(f.y, t.y, g) + 'px', width: w + 'px', height: h + 'px'
     });
     rotor.current.style.transform = `rotateY(${(180 * p).toFixed(2)}deg)`;
@@ -79,8 +81,8 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
     // show exactly one face: iOS Safari doesn't always honour backface-visibility for the card's canvas, which let
     // the front card flicker through the back mid-turn
     const backShows = Math.abs(((180 * p) % 360 + 360) % 360 - 180) < 90;
-    backFace.current.style.visibility = backShows ? 'visible' : 'hidden';
-    frontFace.current.style.visibility = backShows ? 'hidden' : 'visible';
+    backFace.current.style.visibility = backShows ? 'inherit' : 'hidden';
+    frontFace.current.style.visibility = backShows ? 'hidden' : 'inherit';
     const a = clamp01(p / 0.45);
     if (els.sheet) els.sheet.classList.toggle('is-flipping', on);
     if (els.det) {
