@@ -3,25 +3,27 @@ import { CARD_W, CARD_H } from '../config.js';
 
 // One WebGL context draws every shader card. Browsers cap how many WebGL contexts a page may hold, so instead of a
 // context per card, each visible card is drawn in turn into this shared canvas and copied into the card's own 2D
-// canvas (a GPU-to-GPU copy). Cards that are hidden or off-screen stop drawing; with nothing to draw the loop stops.
-// All cards read one clock, so the wheel card and the open window show the same moment.
+// canvas (a GPU-to-GPU copy). Only the centre card and the open window animate; every other card holds the last frame
+// it drew. With nothing animating the loop stops.
+// Each soul has its own pattern clock, which only runs while one of its cards animates: a card coming to the centre
+// carries on from where it stopped instead of jumping ahead, and the wheel card and the open window (same soul, same
+// clock) always show the same moment.
 
 const hex = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255);
 // Resolution relative to card pixels, never above the screen's own density. The wheel sets it per layout: phone
 // cards are shown large, desktop ones small.
 const clampScale = (s) => Math.max(1, Math.min(s, window.devicePixelRatio || 1));
 // the centre card and the open window redraw at up to 60fps (not 120 on ProMotion phones: the patterns move slowly,
-// and it halves their cost); neighbours at 30fps, far cards (small and dimmed) at 15fps
-const frameMs = (dist) => (dist < 0.5 ? 1000 / 60 - 2 : dist <= 2.5 ? 1000 / 30 - 2 : 1000 / 15 - 2);
+// and it halves their cost); every other card keeps its last frame
+const frameMs = (dist) => (dist < 0.5 ? 1000 / 60 - 2 : Infinity);
 
 class ShaderRenderer {
   constructor() {
     this.targets = new Map();
     this.programs = {};
     this.raf = 0;
-    // the pattern clock (seconds): it runs while cards draw and pauses while the loop sleeps, so patterns carry on
-    // from where they stopped instead of jumping ahead
-    this.clock = 0; this.lastMs = 0; this.busy = false;
+    // per-soul pattern clocks (seconds), advanced while one of that soul's cards animates
+    this.clocks = new Map(); this.lastMs = 0; this.busy = false;
     this.rm = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.scale = clampScale(1.5);
     this.loop = (now) => { this.raf = 0; this.frame(now); };
@@ -43,7 +45,7 @@ class ShaderRenderer {
     if (!gl) return;
     this.canvas = canvas; this.gl = gl;
     canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.lost = true; cancelAnimationFrame(this.raf); this.raf = 0; });
-    canvas.addEventListener('webglcontextrestored', () => { this.lost = false; this.programs = {}; this.setup(); this.targets.forEach((t) => this.draw(t, this.now())); this.wake(); });
+    canvas.addEventListener('webglcontextrestored', () => { this.lost = false; this.programs = {}; this.setup(); this.targets.forEach((t) => this.draw(t, this.time(t))); this.wake(); });
     this.setup();
   }
 
@@ -80,28 +82,33 @@ class ShaderRenderer {
     this.scale = s;
     if (!this.gl) return;
     this.size(this.canvas);
-    this.targets.forEach((t) => { this.size(t.canvas); this.draw(t, this.now()); });
+    this.targets.forEach((t) => { this.size(t.canvas); this.draw(t, this.time(t)); });
   }
-  // how far the card is from the centre (in cards) sets how often it redraws
-  setDistance(canvas, dist) { const t = this.targets.get(canvas); if (t) t.every = frameMs(dist); }
-
-  now() {
-    // reduced motion: one still moment
-    return this.rm.matches ? 1.2 : this.clock;
+  // how far the card is from the centre (in cards) sets whether it animates
+  setDistance(canvas, dist) {
+    const t = this.targets.get(canvas);
+    if (!t) return;
+    const every = frameMs(dist);
+    if (every === t.every) return;
+    t.every = every;
+    if (every !== Infinity && t.running) this.wake();
   }
 
-  // While the fan moves, every card keeps animating but redraws half as often (the centre card at 30fps): a moving
-  // card hides the lower rate, and it frees the phone's GPU for the swipe itself (on iPhones copying each card out
-  // of the shared canvas is costly too).
+  // a card's pattern time; reduced motion: one still moment
+  time(t) { return this.rm.matches ? 1.2 : t.clk.v; }
+
+  // While the fan moves, the centre card redraws at 30fps: a moving card hides the lower rate, and it frees the
+  // phone's GPU for the swipe itself (on iPhones copying each card out of the shared canvas is costly too).
   setBusy(on) { this.busy = on; }
 
   // A card's canvas joins; it draws straight away and keeps drawing while running.
   attach(canvas, name, soul) {
     if (!this.supported()) return;
     canvas.width = this.canvas.width; canvas.height = this.canvas.height;
-    const t = { canvas, ctx: canvas.getContext('2d'), name, ac: hex(soul.ac), bg: hex(soul.bg), fg: hex(soul.fg), param: paramsFor(soul), running: true, every: frameMs(0), last: 0 };
+    if (!this.clocks.has(soul.name)) this.clocks.set(soul.name, { v: 0 });
+    const t = { canvas, ctx: canvas.getContext('2d'), name, clk: this.clocks.get(soul.name), ac: hex(soul.ac), bg: hex(soul.bg), fg: hex(soul.fg), param: paramsFor(soul), running: true, every: frameMs(0), last: 0 };
     this.targets.set(canvas, t);
-    this.draw(t, this.now());
+    this.draw(t, this.time(t));
     this.wake();
   }
   detach(canvas) { this.targets.delete(canvas); }
@@ -120,16 +127,18 @@ class ShaderRenderer {
   frame() {
     if (this.lost) { this.lastMs = 0; return; }
     const ms = performance.now();
-    // advance the clock by at most one 30fps frame, so a sleep doesn't make patterns jump
-    if (this.lastMs) this.clock += Math.min(ms - this.lastMs, 1000 / 30) / 1000;
+    // advance clocks by at most one 30fps frame, so a sleep doesn't make patterns jump
+    const dt = this.lastMs ? Math.min(ms - this.lastMs, 1000 / 30) / 1000 : 0;
     this.lastMs = ms;
-    const time = this.now();
+    const ticked = new Set();
     let any = false;
     this.targets.forEach((t) => {
-      if (!t.running) return;
+      if (!t.running || t.every === Infinity) return;
       any = true;
+      // one tick per soul per frame, however many of its cards animate
+      if (!ticked.has(t.clk)) { ticked.add(t.clk); t.clk.v += dt; }
       const every = this.busy ? Math.max(t.every * 2 + 2, 1000 / 30 - 2) : t.every;
-      if (ms - t.last >= every) { t.last = ms; this.draw(t, time); }
+      if (ms - t.last >= every) { t.last = ms; this.draw(t, this.time(t)); }
     });
     if (any && !this.rm.matches) this.wake(); else this.lastMs = 0;
   }

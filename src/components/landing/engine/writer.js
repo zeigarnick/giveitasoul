@@ -30,7 +30,7 @@ export function createWriter() {
       for (const name in f.st) put(els[name], f.st[name]);
       put(els.pill, f.pillAttr, true);
       f.cardPause.forEach((want, i) => {
-        // shader cards redraw less often the further they are from the centre
+        // shader cards animate only at the centre
         const cv = els['card' + i] && els['card' + i].querySelector('.slotbtn canvas');
         if (cv) renderer().setDistance(cv, f.cardDist[i]);
         if (paused[i] === want) return;
