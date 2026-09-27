@@ -1,20 +1,90 @@
-/* The SOUL.md view inside the details window. */
+/* The details window's text, and the flipped card that shows the SOUL.md. */
 .soulfile-head { display: flex; justify-content: space-between; align-items: baseline; }
 .soulfile-back { all: unset; cursor: pointer; font-size: 13px; line-height: 16px; color: #6B6358; }
 .soulfile-back:hover { color: #141210; }
 .soulfile-back:focus-visible { outline: 2px solid #141210; outline-offset: 3px; border-radius: 4px; }
-.soulfile {
-  margin: 12px 0 0; padding: 14px 16px; box-sizing: border-box; height: var(--soulfile-h, 232px);
-  overflow: auto; overscroll-behavior: contain; touch-action: pan-y;
-  border-radius: 12px; background: #F1ECE2; border: 1px solid #E4DCCB;
-  font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; line-height: 18px; color: #2B2621;
-  white-space: pre-wrap; word-break: break-word; tab-size: 2; user-select: text; -webkit-user-select: text; cursor: text;
-}
-.soulfile-actions { margin-top: 16px; display: flex; gap: 8px; }
-.soulfile-actions .btn-primary, .soulfile-actions .btn-secondary { height: 40px; padding: 0 16px; font-size: 14px; border: none; cursor: pointer; font-family: Geist, sans-serif; }
-.soulfile-actions .btn-secondary { border: 1px solid #CFC6B6; }
-.soulfile-note { margin-top: 10px; font-size: 12px; line-height: 16px; color: #6B6358; }
-.sheet-actions .btn-primary { border: none; cursor: pointer; font-family: Geist, sans-serif; }
-.soulfile-page { color: #141210; white-space: nowrap; }
-.soulfile-page:hover { color: #4A443C; }
 a.soulfile-back { text-decoration: none; }
+.sheet-actions .btn-primary { border: none; cursor: pointer; font-family: Geist, sans-serif; }
+/* phone: back to all is a round arrow, "Use this soul" fills the rest of the row, both big enough for a thumb */
+.sheet-actions.is-stack { gap: 8px; }
+.sheet-actions.is-stack .btn-primary { flex: 1; height: 52px; justify-content: center; font-size: 16px; }
+.round-back { all: unset; box-sizing: border-box; width: 52px; height: 52px; flex: none; border-radius: 50%; border: 1px solid #CFC6B6; display: inline-flex; align-items: center; justify-content: center; color: #141210; cursor: pointer; }
+.round-back:focus-visible { outline: 2px solid #141210; outline-offset: 3px; }
+
+/* while the card is turned over: the engine's card art hides under it and the close button steps aside */
+.sheet.is-flipping .sheet-art { visibility: hidden; }
+.sheet.is-flipping .sheet-close { visibility: hidden; }
+
+.flip { position: absolute; z-index: 3; perspective: 1600px; }
+.flip-rotor { position: absolute; inset: 0; transform-style: preserve-3d; }
+.flip-front, .flip-back { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.flip-front-card { position: absolute; top: 0; border-radius: 24px; overflow: hidden; box-shadow: 0 18px 40px -22px rgba(20,18,16,0.35); }
+.is-stack .flip-front-card { border-radius: 16px; }
+.flip-back {
+  transform: rotateY(180deg); border-radius: 22px; overflow: hidden; background: #F6F1E7;
+  box-shadow: inset 0 0 0 1px rgba(20,18,16,0.08), 0 18px 40px -22px rgba(20,18,16,0.35);
+}
+.flip-strip, .flip-body, .flip-dock { opacity: var(--in, 0); }
+.flip-dock { transform: translateY(calc((1 - var(--in, 0)) * 14px)); }
+
+.flip-strip { position: absolute; left: 0; top: 0; right: 0; height: 64px; padding: 0 20px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--soul-bg); color: var(--soul-fg); }
+.flip-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.flip-name { font-family: 'Instrument Serif', Georgia, serif; font-size: 24px; line-height: 26px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.flip-sub { font-family: 'Geist Mono', monospace; font-size: 10px; line-height: 14px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; }
+.flip-page { color: inherit; font-size: 13px; text-decoration: none; opacity: 0.85; white-space: nowrap; }
+.flip-page:hover { color: inherit; opacity: 1; }
+
+.flip-body {
+  position: absolute; left: 0; right: 0; top: 64px; bottom: 0; padding: 16px 22px 104px; box-sizing: border-box;
+  overflow: auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: thin; user-select: text; -webkit-user-select: text;
+}
+.flip-body .md-h { margin: 18px 0 6px; font-family: 'Geist Mono', monospace; font-size: 11px; line-height: 16px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: #6B6358; }
+.flip-body .md-q { margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 17px; line-height: 23px; color: #3A342C; }
+.flip-body .md-p { margin: 10px 0 0; font-size: 14px; line-height: 22px; color: #2B2621; }
+.flip-body .md-li { position: relative; margin: 5px 0 0; padding-left: 14px; font-size: 14px; line-height: 21px; color: #2B2621; }
+.flip-body .md-li::before { content: '–'; position: absolute; left: 0; color: #A39A8C; }
+.flip-body .md-li b { font-weight: 600; }
+
+.flip-dock { position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 12px 12px; background: linear-gradient(180deg, rgba(246,241,231,0) 0%, #F6F1E7 30%); }
+.flip-note { display: block; height: 14px; margin-bottom: 8px; text-align: center; font-size: 11px; line-height: 14px; color: #6B6358; }
+.flip-bar { position: relative; height: 52px; --cp-l: 60px; --cp-r: 60px; }
+.is-row .flip-bar { height: 44px; --cp-l: 52px; --cp-r: 262px; }
+.flip-round { all: unset; box-sizing: border-box; position: absolute; top: 0; width: 52px; height: 52px; border-radius: 50%; border: 1px solid #CFC6B6; background: #FBF8F1; color: #141210; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.is-row .flip-round { width: 44px; height: 44px; }
+.flip-side.is-left { left: 0; }
+.flip-side.is-right { right: 0; }
+.flip-side { transition: opacity 0.18s ease, transform 0.25s cubic-bezier(0.3, 1.4, 0.5, 1); }
+.flip-extras { position: absolute; top: 0; display: flex; gap: 8px; }
+.flip-pillbtn { all: unset; box-sizing: border-box; height: 44px; padding: 0 14px; border-radius: 99px; border: 1px solid #CFC6B6; background: #FBF8F1; color: #141210; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-family: Geist, sans-serif; font-size: 14px; cursor: pointer; white-space: nowrap; }
+.flip-extras .flip-pillbtn { width: 123px; }
+.flip-round:focus-visible, .flip-pillbtn:focus-visible, .flip-copy:focus-visible, .flip-page:focus-visible { outline: 2px solid #141210; outline-offset: 3px; }
+.flip-round:active, .flip-pillbtn:active { transform: scale(0.96); }
+
+/* copy: the button turns green, widens over its neighbours, draws a check and says what to do next */
+.flip-copy {
+  all: unset; box-sizing: border-box; position: absolute; top: 0; bottom: 0; left: var(--cp-l); right: var(--cp-r);
+  border-radius: 99px; background: #141210; color: #F4F0E8; overflow: hidden; cursor: pointer; font-family: Geist, sans-serif;
+  transition: left 0.5s cubic-bezier(0.3, 1.3, 0.5, 1), right 0.5s cubic-bezier(0.3, 1.3, 0.5, 1), background-color 0.3s ease, box-shadow 0.3s ease;
+}
+.flip-copy-label, .flip-copy-done { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.flip-copy-label { font-size: 16px; font-weight: 500; transition: opacity 0.15s ease, transform 0.25s ease; }
+.is-row .flip-copy-label { font-size: 15px; }
+.flip-copy-done { gap: 10px; pointer-events: none; }
+.flip-check { opacity: 0; transform: scale(0.4); transition: opacity 0.12s ease 0.05s, transform 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) 0.05s; flex: none; }
+.flip-check path { stroke-dasharray: 16; stroke-dashoffset: 16; transition: stroke-dashoffset 0.35s ease 0.15s; }
+.flip-copy-msg { font-size: 15px; font-weight: 500; white-space: nowrap; opacity: 0; transform: translateX(8px); transition: opacity 0.25s ease 0.2s, transform 0.35s ease 0.2s; }
+.flip-bar.is-done .flip-copy { left: 0; right: 0; background: #2F7D4F; box-shadow: 0 10px 24px -14px rgba(47,125,79,0.6); }
+.flip-bar.is-done .flip-copy-label { opacity: 0; transform: translateY(-10px); }
+.flip-bar.is-done .flip-check { opacity: 1; transform: scale(1); }
+.flip-bar.is-done .flip-check path { stroke-dashoffset: 0; }
+.flip-bar.is-done .flip-copy-msg { opacity: 1; transform: none; }
+.flip-bar.is-done .flip-side { opacity: 0; transform: scale(0.88); pointer-events: none; }
+
+.flip-more { display: flex; gap: 8px; height: 0; overflow: hidden; transition: height 0.3s cubic-bezier(0.3, 1.2, 0.5, 1); }
+.flip-more .flip-pillbtn { flex: 1; height: 46px; margin-top: 8px; opacity: 0; transition: opacity 0.2s ease; }
+.flip-more.is-open { height: 54px; }
+.flip-more.is-open .flip-pillbtn { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .flip-copy, .flip-copy-label, .flip-check, .flip-check path, .flip-copy-msg, .flip-side, .flip-more, .flip-more .flip-pillbtn { transition: none; }
+}
