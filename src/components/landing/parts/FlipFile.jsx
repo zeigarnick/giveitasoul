@@ -49,7 +49,7 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
   const md = SOUL_FILES[slug] || '';
   const blocks = useMemo(() => toBlocks(md), [md]);
   const page = `/souls/${slug}/`;
-  const panel = useRef(null), rotor = useRef(null), front = useRef(null), backFace = useRef(null), copyBtn = useRef(null);
+  const panel = useRef(null), rotor = useRef(null), frontFace = useRef(null), front = useRef(null), backFace = useRef(null), backInner = useRef(null), copyBtn = useRef(null);
   const s = useRef({ p: 0, v: 0, raf: 0, last: 0, from: null, to: null });
   const [done, setDone] = useState('');
   const [more, setMore] = useState(false);
@@ -71,9 +71,16 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
     });
     rotor.current.style.transform = `rotateY(${(180 * p).toFixed(2)}deg)`;
     front.current.style.left = (row ? 0 : (w - cardW) / 2) + 'px';
-    const b = clamp01((p - 0.6) / 0.3);
+    // the back's content is laid out once at the final size and only revealed as the card grows, so its text never
+    // re-wraps mid-flip; it fades in once the card is nearly full size
+    Object.assign(backInner.current.style, { width: t.w + 'px', height: t.h + 'px', left: (row ? 0 : (w - t.w) / 2) + 'px' });
+    const b = clamp01((p - 0.72) / 0.24);
     backFace.current.style.setProperty('--in', b.toFixed(3));
-    backFace.current.style.visibility = p > 0.45 ? 'visible' : 'hidden';
+    // show exactly one face: iOS Safari doesn't always honour backface-visibility for the card's canvas, which let
+    // the front card flicker through the back mid-turn
+    const backShows = Math.abs(((180 * p) % 360 + 360) % 360 - 180) < 90;
+    backFace.current.style.visibility = backShows ? 'visible' : 'hidden';
+    frontFace.current.style.visibility = backShows ? 'hidden' : 'visible';
     const a = clamp01(p / 0.45);
     if (els.sheet) els.sheet.classList.toggle('is-flipping', on);
     if (els.det) {
@@ -137,12 +144,13 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
   return (
     <div ref={panel} className={'flip' + (row ? ' is-row' : ' is-stack')} style={{ visibility: 'hidden' }} aria-hidden={!flipped}>
       <div ref={rotor} className="flip-rotor">
-        <div className="flip-front">
+        <div ref={frontFace} className="flip-front">
           <div ref={front} className="flip-front-card" style={{ width: cardW + 'px', height: cardH + 'px' }}>
             <div style={{ width: '232px', height: '324px', transformOrigin: '0 0', transform: `scale(${ART})` }}><SoulCard s={soul} /></div>
           </div>
         </div>
         <div ref={backFace} className="flip-back" style={{ '--soul-bg': soul.bg, '--soul-fg': soul.fg }}>
+          <div ref={backInner} className="flip-back-inner">
           <div className="flip-strip">
             <div className="flip-title">
               <span className="flip-name">{soul.name}</span>
@@ -186,6 +194,7 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
                 <button type="button" className="flip-pillbtn" onClick={copyLink} tabIndex={more ? 0 : -1}><LinkIcon />Copy link</button>
               </div>
             )}
+          </div>
           </div>
         </div>
       </div>

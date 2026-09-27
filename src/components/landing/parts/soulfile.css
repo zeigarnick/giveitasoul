@@ -18,12 +18,14 @@ a.soulfile-back { text-decoration: none; }
 .flip { position: absolute; z-index: 3; perspective: 1600px; }
 .flip-rotor { position: absolute; inset: 0; transform-style: preserve-3d; }
 .flip-front, .flip-back { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.flip-front { transform: rotateY(0deg); }
 .flip-front-card { position: absolute; top: 0; border-radius: 24px; overflow: hidden; box-shadow: 0 18px 40px -22px rgba(20,18,16,0.35); }
 .is-stack .flip-front-card { border-radius: 16px; }
 .flip-back {
   transform: rotateY(180deg); border-radius: 22px; overflow: hidden; background: #F6F1E7;
   box-shadow: inset 0 0 0 1px rgba(20,18,16,0.08), 0 18px 40px -22px rgba(20,18,16,0.35);
 }
+.flip-back-inner { position: absolute; top: 0; left: 0; }
 .flip-strip, .flip-body, .flip-dock { opacity: var(--in, 0); }
 .flip-dock { transform: translateY(calc((1 - var(--in, 0)) * 14px)); }
 
