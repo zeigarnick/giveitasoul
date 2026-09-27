@@ -38,6 +38,10 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
   const ext = e.ext || 0, exty = e.exty || 0;
   const cardPause = [], cardDist = [];
   let visible = 0;
+  // Stacking follows each card's rank by distance from the centre, which only changes as two cards pass each other,
+  // not its exact distance, which changes every frame; restacking layers is costly on phones.
+  const rank = [];
+  e.souls.map((_, i) => i).sort((a, b) => Math.abs(ringOffset(a, pos, N)) - Math.abs(ringOffset(b, pos, N))).forEach((i, r) => { rank[i] = r; });
   for (let i = 0; i < N; i++) {
     const d = ringOffset(i, pos, N);
     const ad = Math.abs(d);
@@ -77,11 +81,13 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
     st['card' + i] = {
       transform: 'translate(' + (crisp ? Math.round(x) + 'px, ' + Math.round(y) : x.toFixed(1) + 'px, ' + y.toFixed(1)) + 'px) rotate(' + (L(wa, oa) + Math.sign(d) * slc * 10 + Math.max(-6, Math.min(6, cst.v * 2.2)) * Math.sign(d)).toFixed(2) + 'deg)' + (flat ? '' : ' perspective(1400px) rotateY(' + ry.toFixed(2) + 'deg)' + turn) + ' scale(' + (L(ws, os) * (1 - 0.08 * slc)).toFixed(4) + ')',
       opacity: op.toFixed(3),
-      zIndex: isActive && op01 > 0.01 ? 120 : 100 - Math.round(ad * 10),
+      zIndex: isActive && op01 > 0.01 ? 120 : 100 - rank[i],
       filter: bright > 0.9995 ? 'none' : 'brightness(' + bright.toFixed(3) + ')',
-      boxShadow: cardShadow(near, cfg),
+      boxShadow: cardShadow(0, cfg),
       willChange: crisp ? 'auto' : 'transform'
     };
+    // the deeper shadow near the centre is a fixed shadow on its own layer faded in, so only opacity changes
+    st['shade' + i] = { opacity: near.toFixed(3), boxShadow: nearShadow(cfg) };
     st['glare' + i] = isActive ? glare(p) : NO_GLARE;
     // off the window, invisible, or under the full-strength scrim
     cardPause[i] = e.rm || op < 0.001 || op01 > 0.98 || x < -300 - ext || x > Lay.W + 20 + ext || y > Lay.H + 20 + exty;
@@ -105,6 +111,13 @@ const OPEN_SHADOW = [{ y: 2, blur: 6, spread: 0, a: 0.08 }, { y: 50, blur: 110, 
 const shadowCss = (layers, digits) => layers.map((s) => '0 ' + s.y.toFixed(digits) + 'px ' + s.blur.toFixed(digits) + 'px ' + s.spread.toFixed(digits) + 'px rgba(20,18,16,' + s.a.toFixed(3) + ')').join(', ');
 function cardShadow(near, cfg) {
   return shadowCss(shadowLayers(near, cfg), 0);
+}
+// A card's shadow is its far shadow (near 0, fixed on the card) plus this one faded in by `near`: each layer's
+// strength is chosen so the two together match the centre card's shadow (near 1). Changing a box-shadow repaints
+// the whole card, so on the wheel neither changes; only this layer's opacity does.
+function nearShadow(cfg) {
+  const far = shadowLayers(0, cfg);
+  return shadowCss(shadowLayers(1, cfg).map((s, j) => ({ ...s, a: 1 - (1 - s.a) / (1 - far[j].a) })), 0);
 }
 // The details window's shadow: the centre card's layers in window pixels (the card's are scaled by its transform)
 // at m = 0, growing to the open window's at m = 1; `lift` deepens the ambient layer mid-flight.

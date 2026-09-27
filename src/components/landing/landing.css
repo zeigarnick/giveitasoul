@@ -39,6 +39,8 @@
 
 /* the fan */
 .fancard { position: absolute; left: 0; top: 0; width: 232px; height: 324px; border-radius: 20px; will-change: transform; }
+/* the deeper shadow a card gets near the centre, on its own layer so fading it doesn't repaint the card */
+.fancard-shade { position: absolute; inset: 0; z-index: -1; border-radius: 20px; pointer-events: none; will-change: opacity; }
 
 /* the highlight that follows the pointer over the centre card: a pre-drawn spot moved by transform */
 .glare { position: absolute; inset: 0; border-radius: 20px; overflow: hidden; pointer-events: none; }
