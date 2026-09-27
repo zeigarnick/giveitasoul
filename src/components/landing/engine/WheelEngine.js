@@ -197,7 +197,6 @@ export class WheelEngine {
 
     // deck swap: p.sink 0..1 sinks the fan; at the bottom the deck changes and it rises again
     if (p.sink == null) { p.sink = 0; p.sinkv = 0; p.sinkT = 0; p.tog = 0; p.togv = 0; }
-    const curIdx = this.deck === 'mbti' ? 0 : 1;
     // swap as soon as no old card can be seen (they fade as they sink, see frame.js), not once they've all come to rest
     if (this.swapPending && p.sink > 0.75 && this.cs && this.fanVisible === 0) {
       this.deck = this.deck === 'mbti' ? 'ennea' : 'mbti';
@@ -210,7 +209,10 @@ export class WheelEngine {
       this.emit();
     }
     if (this.riseAt && now >= this.riseAt) { this.riseAt = 0; p.sinkT = 0; }
-    const togT = this.swapPending ? 1 - curIdx : curIdx; // flips once the switch is committed, on its own spring
+    // flips once the switch is committed, on its own spring. Read the deck here, after any swap above: read before it,
+    // the frame the deck changes would aim the thumb back at the old deck for a moment and it would jerk back
+    const curIdx = this.deck === 'mbti' ? 0 : 1;
+    const togT = this.swapPending ? 1 - curIdx : curIdx;
     const sinkS = p.sinkT ? springK(0.4, 0.95) : springK(0.62, 0.84), togS = springK(0.32, 0.86);
     // the deck name under the fan rolls from the old name to the new one once a committed switch is halfway down, so
     // the new name lands as the old deck fades and the new one rises over it; it resets unseen once the switch is over
