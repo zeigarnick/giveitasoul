@@ -267,7 +267,8 @@ function deckStyles(e, st) {
   // over it. Once a switch is committed the name rolls over on its own spring (p.lab): the old name lifts away and
   // blurs out while the new one rises into place, like the details text.
   const sk = clamp01(p.sink || 0);
-  const o = e.postSwap ? smooth(clamp01((sk - 0.1) / 0.5)) : smooth(clamp01(sk / 0.18));
+  // (no deck name during the page-load entrance: nothing is switching)
+  const o = e.intro ? 0 : e.postSwap ? smooth(clamp01((sk - 0.1) / 0.5)) : smooth(clamp01(sk / 0.18));
   const from = e.postSwap ? other : deck, to = e.postSwap ? deck : other;
   const l = p.lab || 0, lc = clamp01(l);
   st.flip = { opacity: o.toFixed(3) };

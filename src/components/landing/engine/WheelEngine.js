@@ -6,8 +6,8 @@ import { createWriter } from './writer.js';
 import { renderer } from '../shaders/renderer.js';
 
 const DECKS = { mbti: MBTI, ennea: ENNEAGRAM };
-// ms the fan stays down after a deck switch before the new deck rises
-const SWAP_HOLD = 300;
+// ms the fan stays down after a deck switch before the new deck rises, and after page load before the fan rises
+const SWAP_HOLD = 300, INTRO_DELAY = 150;
 // a 9-card deck is laid out twice round the ring so the fan runs to the screen edges like the 16-card one
 const ring = (deck) => (DECKS[deck].length < 16 ? DECKS[deck].concat(DECKS[deck]) : DECKS[deck]);
 
@@ -31,10 +31,17 @@ export class WheelEngine {
     this.key = '';
     this.snapshot = { open: false, deck: 'mbti', key: '', layout: this.layout };
     this.listeners = new Set();
-    this.p = { pos: this.rm ? 0 : -4, v: 0, target: 0, drag: null, moved: 0, open: 0, ov: 0, rest: 0, rv: 0, sv: 0, last: 0, tx: 0, txv: 0, ty: 0, tyv: 0, gl: 0, glv: 0 };
+    this.p = { pos: 0, v: 0, target: 0, drag: null, moved: 0, open: 0, ov: 0, rest: 0, rv: 0, sv: 0, last: 0, tx: 0, txv: 0, ty: 0, tyv: 0, gl: 0, glv: 0 };
     // where the pointer aims the centre card's tilt and glare (-1..1 across the card; g is 1 while hovering it)
     this.aim = { x: 0, y: 0, g: 0 };
     this.souls = ring('mbti');
+    // Entrance: the fan starts sunk and faded out, and rises into place just like a new deck does after a switch
+    // (centre card first, the rest rippling out on the chain), without spinning. Reduced motion starts it in place.
+    this.intro = !this.rm;
+    if (this.intro) {
+      Object.assign(this.p, { sink: 1, sinkv: 0, sinkT: 1, tog: 0, togv: 0 });
+      this.cs = this.souls.map(() => ({ s: 1, v: 0 }));
+    }
     this.bez = cubicBezier(FEEL.fx1, FEEL.fy1, FEEL.fx2, FEEL.fy2);
     this.els = {};
     this.refs = {};
@@ -95,6 +102,8 @@ export class WheelEngine {
     if (document.fonts) { document.fonts.addEventListener('loadingdone', this.onFonts); document.fonts.ready.then(this.onFonts); }
     this.readExt();
     this.measureDue = true; this.dirty = true;
+    // a short beat after mount, so the first frames (fonts, shaders) don't stutter the rise
+    if (this.intro) this.riseAt = performance.now() + INTRO_DELAY;
     this.wake();
     if (import.meta.env.DEV) window.__wheel = this;
   }
@@ -234,7 +243,7 @@ export class WheelEngine {
     if (Math.abs(p.wdyv) < 0.5 && Math.abs(p.wdy - p.dy) < 0.2) { p.wdy = p.dy; p.wdyv = 0; }
     if (!p.liftT && Math.abs(p.liftv) < 0.05 && Math.abs(p.lift) < 0.03) { p.lift = 0; p.liftv = 0; }
     if (Math.abs(p.hovv) < 0.002 && Math.abs(p.hov - hovT) < 0.002) { p.hov = hovT; p.hovv = 0; }
-    if (!p.gs && Math.abs(p.sinkv) < 0.002 && Math.abs(p.sink - p.sinkT) < 0.0006) { p.sink = p.sinkT; p.sinkv = 0; if (p.sink === 0) this.postSwap = false; }
+    if (!p.gs && Math.abs(p.sinkv) < 0.002 && Math.abs(p.sink - p.sinkT) < 0.0006) { p.sink = p.sinkT; p.sinkv = 0; if (p.sink === 0) { this.postSwap = false; this.intro = false; } }
     if (Math.abs(p.togv) < 0.002 && Math.abs(p.tog - togT) < 0.0006) { p.tog = togT; p.togv = 0; }
     // Hand the closing window back to the wheel card exactly once. The close spring can swing back across the
     // threshold; without this latch the page would flip between window and card for a moment (blinking edges).
@@ -420,6 +429,8 @@ export class WheelEngine {
     const p = this.p;
     this.pendingOpen = null;
     this.lastInput = performance.now();
+    // touching the page before the entrance starts brings the fan up straight away
+    if (this.intro && this.riseAt) { this.riseAt = 0; p.sinkT = 0; }
     this.wake();
     if (this.open) {
       if (this.openB && p.col > 0.9) p.gd = { x0: e.clientX, y0: e.clientY, ly: e.clientY, lt: performance.now(), vel: 0, on: false };
