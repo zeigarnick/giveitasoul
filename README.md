@@ -18,11 +18,27 @@ Built with [Astro](https://astro.build) and one React island (`src/components/la
 
 The page is designed on a 1440×900 stage (390×844 on phones) and scaled to fit the window; on wide or tall windows the fan and fades run to the real window edges.
 
+## For AI agents and search engines
+
+Everything is built from `site` in `astro.config.mjs` (https://giveitasoul.com) and `src/lib/site.js`.
+
+- `/llms.txt` ([llmstxt.org](https://llmstxt.org)): what the site is, how to install a soul, and every soul's SOUL.md link. `/llms-full.txt` has every SOUL.md in one file; `/index.md` is the homepage as markdown; `/souls/<slug>.md` is each soul's file.
+- Every page has a canonical link, Open Graph and Twitter tags, a link to its markdown version and JSON-LD (the site and its list of souls on the homepage; each soul and its breadcrumbs on its page). See `src/components/seo/Seo.astro`.
+- Social previews: `/og/<slug>.png` for each soul and `/og/home.png`, 1200×630, drawn at build time in the site's typefaces and each soul's colours (Satori and resvg; `src/lib/og.js`).
+- `/sitemap.xml` lists every page; `/robots.txt` welcomes all crawlers, AI ones included.
+- `/_headers` (Cloudflare Pages) serves the files agents read as UTF-8 markdown that any origin can fetch.
+- The homepage wheel is drawn by script, so the page also carries every soul as plain links for screen readers and crawlers.
+
 ## Structure
 
 ```
 src/
   pages/index.astro                 page shell, fonts, stage scaling
+  pages/souls/[slug].astro          a page for each soul; [slug].md.ts serves its SOUL.md
+  pages/llms.txt.ts, llms-full.txt.ts, index.md.ts, sitemap.xml.ts, robots.txt.ts, [file].ts (_headers)
+  pages/og/[slug].png.ts            social preview images, drawn by lib/og.js
+  lib/site.js                       site name, address and description; every soul with its addresses
+  components/seo/Seo.astro          meta tags, canonical link and structured data for a page
   components/landing/
     Landing.jsx                     lays out the stage from the parts below
     useWheel.js                     connects the wheel engine to React

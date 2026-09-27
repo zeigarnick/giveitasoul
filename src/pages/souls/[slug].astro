@@ -3,6 +3,8 @@
 import SoulCard from '../../components/landing/SoulCard.jsx';
 import { MBTI, ENNEAGRAM } from '../../data/souls.js';
 import { SOUL_FILES, soulSlug, soulPrompt } from '../../lib/souls.js';
+import Seo from '../../components/seo/Seo.astro';
+import { SITE, absolute, typeLabel } from '../../lib/site.js';
 
 export function getStaticPaths() {
   const decks = [
@@ -26,22 +28,44 @@ const slug = soulSlug(soul.name);
 const md = SOUL_FILES[slug] || '';
 const says = soul.says.replace(/^[“"]|[”"]$/g, '');
 const title = `${soul.name} — a SOUL.md for your AI agent · giveitasoul`;
-const description = `${soul.line} ${says}`;
+const type = typeLabel(soul);
+const description = `${soul.name} (${deck} ${type}): ${soul.line} A ready-to-use SOUL.md personality for your AI agent. “${says}”`;
+const path = `/souls/${slug}/`;
+// structured data: the soul as a creative work with its markdown file, and where it sits on the site
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'CreativeWork',
+    name: soul.name,
+    headline: `${soul.name}: a SOUL.md for your AI agent`,
+    description,
+    url: absolute(path),
+    image: absolute(`/og/${slug}.png`),
+    genre: `${deck} ${type}`,
+    keywords: ['SOUL.md', 'AI agent personality', deck, type],
+    inLanguage: 'en',
+    isPartOf: { '@type': 'WebSite', name: SITE.name, url: SITE.url },
+    encoding: { '@type': 'MediaObject', encodingFormat: 'text/markdown', contentUrl: absolute(`/souls/${slug}.md`) },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: SITE.name, item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: `${deck} souls`, item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 3, name: soul.name, item: absolute(path) },
+    ],
+  },
+];
 ---
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>{title}</title>
-    <meta name="description" content={description} />
-    <meta property="og:type" content="article" />
-    <meta property="og:title" content={`${soul.name} · giveitasoul`} />
-    <meta property="og:description" content={description} />
-    <meta name="twitter:card" content="summary" />
+    <Seo title={title} description={description} path={path} type="article" markdown={`/souls/${slug}.md`} jsonLd={jsonLd} image={`/og/${slug}.png`} imageAlt={`${soul.name}, ${deck} ${type}: ${soul.line}`} />
     <meta name="theme-color" content="#F4F0E8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="alternate" type="text/markdown" href={`/souls/${slug}.md`} title="SOUL.md" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" />

@@ -1,0 +1,44 @@
+---
+// Everything in a page's <head> that tells search engines, social previews and AI agents what the page is:
+// title, description, canonical address, Open Graph and Twitter tags, the markdown version and structured data.
+import { SITE, absolute } from '../../lib/site.js';
+
+interface Props {
+  title: string;
+  description: string;
+  path: string;
+  type?: 'website' | 'article';
+  markdown?: string;
+  jsonLd?: object | object[];
+  // the social preview (1200×630) and what it shows, for people who can't see it
+  image: string;
+  imageAlt: string;
+}
+const { title, description, path, type = 'website', markdown, jsonLd, image, imageAlt } = Astro.props;
+const url = absolute(path);
+const imageUrl = absolute(image);
+---
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={url} />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta property="og:site_name" content={SITE.name} />
+<meta property="og:type" content={type} />
+<meta property="og:url" content={url} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:locale" content="en" />
+<meta property="og:image" content={imageUrl} />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content={imageAlt} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={imageUrl} />
+<meta name="twitter:image:alt" content={imageAlt} />
+{markdown && <link rel="alternate" type="text/markdown" href={markdown} title="This page as markdown" />}
+<link rel="help" type="text/plain" href="/llms.txt" title="llms.txt: this site for AI agents" />
+<link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+{jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}

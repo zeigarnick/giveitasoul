@@ -1,18 +1,28 @@
 ---
 import Landing from '../components/landing/Landing.jsx';
+import Seo from '../components/seo/Seo.astro';
+import { SITE, DECKS, absolute, allSouls } from '../lib/site.js';
 
-const title = 'giveitasoul — give your AI agents a soul';
-const description = 'Pick a personality for your personal AI agent. Spin through 16 MBTI souls or 9 Enneagram souls, meet one, and give it to your agent as a SOUL.md.';
+const { title, description } = SITE;
+const souls = allSouls();
+// structured data: the site, and the souls it offers as a list
+const jsonLd = [
+  { '@context': 'https://schema.org', '@type': 'WebSite', name: SITE.name, url: SITE.url, description },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Souls for AI agents',
+    numberOfItems: souls.length,
+    itemListElement: souls.map((s, i) => ({ '@type': 'ListItem', position: i + 1, name: s.name, url: absolute(s.page) })),
+  },
+];
 ---
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>{title}</title>
-    <meta name="description" content={description} />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
+    <Seo title={title} description={description} path="/" markdown="/index.md" jsonLd={jsonLd} image="/og/home.png" imageAlt="Give your AI agents a soul: a fan of giveitasoul personality cards" />
     <meta name="theme-color" content="#F4F0E8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -34,6 +44,20 @@ const description = 'Pick a personality for your personal AI agent. Spin through
           <p>{description}</p>
         </div>
       </noscript>
+      <!-- The wheel is drawn by script; this is every soul as plain links, for screen readers and search engines. -->
+      <nav class="sr-only" aria-label="All souls">
+        {DECKS.map((deck) => (
+          <section>
+            <h2>{deck.label} souls</h2>
+            <ul>
+              {souls.filter((s) => s.deck === deck.label).map((s) => (
+                <li><a href={s.page}>{s.name}</a>: {s.type}. {s.line}</li>
+              ))}
+            </ul>
+          </section>
+        ))}
+        <p>For AI agents: <a href="/llms.txt">llms.txt</a>, or <a href="/index.md">this page as markdown</a>.</p>
+      </nav>
     </main>
     <script is:inline>
       (function () {
@@ -91,6 +115,7 @@ const description = 'Pick a personality for your personal AI agent. Spin through
   .wheel:active { cursor: grabbing; }
   .slotbtn { all: unset; display: block; cursor: pointer; border-radius: 20px; }
   .slotbtn:focus-visible { outline: 2px solid #141210; outline-offset: 4px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   .fallback { max-width: 560px; margin: 20vh auto 0; padding: 0 24px; text-align: center; }
   .fallback h1 { font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 56px; line-height: 1; margin: 0 0 16px; }
 </style>
