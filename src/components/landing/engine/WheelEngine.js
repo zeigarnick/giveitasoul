@@ -96,6 +96,10 @@ export class WheelEngine {
       this.emit();
       this.wake();
     };
+    // iPhone Safari only reports a finger's movement as pointer moves (so the wheel can be dragged) once something
+    // listens for touches; this listener does nothing else
+    this.onTouch = () => {};
+    if (this.els.root) this.els.root.addEventListener('touchstart', this.onTouch, { passive: true });
     this.mq.addEventListener('change', this.onRm);
     this.phoneMq.addEventListener('change', this.onLayout);
     window.addEventListener('resize', this.onResize);
@@ -110,6 +114,7 @@ export class WheelEngine {
   unmount() {
     cancelAnimationFrame(this.raf); this.raf = 0;
     clearTimeout(this.wt); clearTimeout(this.sleepT);
+    if (this.els.root) this.els.root.removeEventListener('touchstart', this.onTouch);
     this.mq.removeEventListener('change', this.onRm);
     this.phoneMq.removeEventListener('change', this.onLayout);
     window.removeEventListener('resize', this.onResize);
