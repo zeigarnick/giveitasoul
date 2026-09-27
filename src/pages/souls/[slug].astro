@@ -58,13 +58,13 @@ const description = `${soul.line} ${says}`;
           <div class="card"><SoulCard client:only="react" s={soul} /></div>
         </div>
         <div class="intro-text">
-          <p class="meta">{deck} · {soul.anchor} · {soul.weight}</p>
+          <p class="meta">{deck} · {soul.anchor}</p>
           <h1>{soul.name}</h1>
           <p class="line">{soul.line}</p>
           <p class="says">{soul.says}</p>
           <div class="moments">
-            <p class="moments-title">In moments, it will…</p>
-            <ul>{(soul.moments || []).map((m) => <li>{m}</li>)}</ul>
+            <p class="moments-title">What it’s like</p>
+            <ul>{(soul.traits || []).map((m) => <li>{m}</li>)}</ul>
           </div>
           <a href="#soul-md" class="btn btn-primary">Use this soul</a>
         </div>

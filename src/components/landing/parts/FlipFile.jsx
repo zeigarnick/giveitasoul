@@ -156,7 +156,7 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
           <div className="flip-strip">
             <div className="flip-title">
               <span className="flip-name">{soul.name}</span>
-              <span className="flip-sub">{`SOUL.md · ${soul.anchor} · ${soul.weight}`}</span>
+              <span className="flip-sub">{`SOUL.md · ${soul.anchor}`}</span>
             </div>
             <a href={page} className="flip-page" tabIndex={flipped ? 0 : -1}>Soul page ↗</a>
           </div>

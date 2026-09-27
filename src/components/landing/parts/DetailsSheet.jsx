@@ -28,14 +28,14 @@ export function DetailsSheet({ engine, st, pill, soul, L }) {
         </div>
         <div ref={engine.bind('det')} className="sheet-text" style={{ width: textW, ...st.det }} aria-hidden={flipped}>
           <span ref={engine.bind('d0')} className="sheet-meta soulfile-head" style={st.d0}>
-            <span>{`${soul.anchor} · ${soul.weight}`}</span>
+            <span>{soul.anchor}</span>
             <a href={page} className="soulfile-back">Soul page ↗</a>
           </span>
           <span ref={engine.bind('d1')} className="sheet-name" style={{ fontSize: `${L.nameFs}px`, lineHeight: `${L.nameLh}px`, ...st.d1 }}>{soul.name}</span>
           <span ref={engine.bind('d2')} className="sheet-says" style={st.d2}>{soul.says}</span>
           <div ref={engine.bind('d3')} className="sheet-moments" style={st.d3}>
-            <span className="sheet-moments-title">In moments, it will…</span>
-            {(soul.moments || []).map((m, i) => <span key={i} className="sheet-moment">{`— ${m}`}</span>)}
+            <span className="sheet-moments-title">What it’s like</span>
+            {(soul.traits || []).map((m, i) => <span key={i} className="sheet-moment">{`— ${m}`}</span>)}
           </div>
           {row ? (
             <div ref={engine.bind('d4')} className="sheet-actions" style={st.d4}>
