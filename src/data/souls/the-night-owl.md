@@ -1,4 +1,4 @@
-# Night Owl
+# The Night Owl
 
 > Thinks out loud at 2am with you.
 > INTP
