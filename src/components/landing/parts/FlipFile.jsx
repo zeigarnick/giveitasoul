@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import SoulCard from '../SoulCard.jsx';
-import { SOUL_FILES, soulSlug } from '../../../lib/souls.js';
+import { SOUL_FILES, soulSlug, soulPrompt } from '../../../lib/souls.js';
 
 // "Use this soul": the card in the open window turns over, growing across the window as it turns, and its back is
 // the SOUL.md. It runs on its own spring on top of the wheel engine: it reads where the engine left the card art,
@@ -20,7 +20,7 @@ async function copyText(text) {
   } catch (e) { return false; }
 }
 
-// SOUL.md -> blocks for reading (the copy/download is always the raw file)
+// SOUL.md -> blocks for reading (Copy wraps it in a note to the agent; Download is the raw file)
 function toBlocks(md) {
   const out = [];
   for (const line of md.split('\n')) {
@@ -131,7 +131,7 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
   useEffect(() => { const st = s.current; cancelAnimationFrame(st.raf); st.p = 0; st.v = 0; apply(); setMore(false); }, [soul.name]);
 
   const flash = (what) => { setDone(what); clearTimeout(timer.current); timer.current = setTimeout(() => setDone(''), what === 'file' ? 2300 : 1600); };
-  const copyFile = async () => { if (await copyText(md)) flash('file'); };
+  const copyFile = async () => { if (await copyText(soulPrompt(soul.name, md))) flash('file'); };
   const copyLink = async () => { if (await copyText(`${location.origin}${page}`)) flash('link'); };
   const download = () => {
     const url = URL.createObjectURL(new Blob([md], { type: 'text/markdown' }));

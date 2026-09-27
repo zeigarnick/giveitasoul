@@ -2,7 +2,7 @@
 // A page for each soul: the card, what it's like, and its SOUL.md to copy, download or link.
 import SoulCard from '../../components/landing/SoulCard.jsx';
 import { MBTI, ENNEAGRAM } from '../../data/souls.js';
-import { SOUL_FILES, soulSlug } from '../../lib/souls.js';
+import { SOUL_FILES, soulSlug, soulPrompt } from '../../lib/souls.js';
 
 export function getStaticPaths() {
   const decks = [
@@ -74,7 +74,7 @@ const description = `${soul.line} ${says}`;
         <div class="file-head">
           <div>
             <h2 id="file-title">SOUL.md</h2>
-            <p class="file-sub">Give this to your agent. It's plain text, so it works anywhere.</p>
+            <p class="file-sub">Copy adds a short note asking your agent to save this as its SOUL.md.</p>
           </div>
           <div class="actions">
             <button type="button" class="btn btn-primary" data-copy="file">Copy</button>
@@ -88,9 +88,9 @@ const description = `${soul.line} ${says}`;
       <section class="how" aria-labelledby="how-title">
         <h2 id="how-title">How to give it to your agent</h2>
         <ol>
-          <li><strong>Paste it.</strong> Copy the file into your agent's custom instructions or personality settings.</li>
-          <li><strong>Save it.</strong> If your agent reads files, download it and save it as <code>SOUL.md</code> where your agent keeps its setup.</li>
-          <li><strong>Link it.</strong> If your agent can read the web, give it the link and say: "Use this as your soul."</li>
+          <li><strong>Paste it into a chat.</strong> Press Copy and send it to your agent. It will back up its old SOUL.md and save this one.</li>
+          <li><strong>Save it yourself.</strong> Download the file and save it as <code>SOUL.md</code> where your agent keeps its setup, or paste it into its personality settings.</li>
+          <li><strong>Link it.</strong> If your agent can read the web, give it the link and say: "Make this your SOUL.md."</li>
         </ol>
       </section>
 
@@ -101,9 +101,8 @@ const description = `${soul.line} ${says}`;
       </nav>
     </main>
 
-    <script is:inline define:vars={{ slug }}>
+    <script is:inline define:vars={{ slug, prompt: soulPrompt(soul.name, md) }}>
       (function () {
-        var md = document.getElementById('md').textContent;
         async function copy(text) {
           try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
           try {
@@ -115,7 +114,7 @@ const description = `${soul.line} ${says}`;
           var label = btn.textContent;
           btn.addEventListener('click', async function () {
             var link = btn.dataset.copy === 'link';
-            var ok = await copy(link ? location.origin + '/souls/' + slug + '.md' : md);
+            var ok = await copy(link ? location.origin + '/souls/' + slug + '.md' : prompt);
             if (!ok) return;
             btn.textContent = link ? 'Link copied' : 'Copied';
             clearTimeout(btn._t); btn._t = setTimeout(function () { btn.textContent = label; }, 1600);
