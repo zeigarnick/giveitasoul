@@ -72,7 +72,7 @@ class ShaderRenderer {
     gl.linkProgram(prog);
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(`shader ${name}: ${gl.getProgramInfoLog(prog)}`);
     const u = (n) => gl.getUniformLocation(prog, n);
-    return (this.programs[name] = { prog, pos: gl.getAttribLocation(prog, 'a_pos'), time: u('u_time'), ac: u('u_ac'), bg: u('u_bg'), fg: u('u_fg'), param: u('u_param') });
+    return (this.programs[name] = { prog, pos: gl.getAttribLocation(prog, 'a_pos'), time: u('u_time'), ac: u('u_ac'), bg: u('u_bg'), fg: u('u_fg'), param: u('u_param'), frame: u('u_frame') });
   }
 
   size(canvas) { canvas.width = Math.ceil(CARD_W * this.scale); canvas.height = Math.ceil(CARD_H * this.scale); }
@@ -106,12 +106,19 @@ class ShaderRenderer {
     if (!this.supported()) return;
     canvas.width = this.canvas.width; canvas.height = this.canvas.height;
     if (!this.clocks.has(soul.name)) this.clocks.set(soul.name, { v: 0 });
-    const t = { canvas, ctx: canvas.getContext('2d'), name, clk: this.clocks.get(soul.name), ac: hex(soul.ac), bg: hex(soul.bg), fg: hex(soul.fg), param: paramsFor(soul), running: true, every: frameMs(0), last: 0 };
+    const t = { canvas, ctx: canvas.getContext('2d'), name, clk: this.clocks.get(soul.name), ac: hex(soul.ac), bg: hex(soul.bg), fg: hex(soul.fg), param: paramsFor(soul), nameTop: 254, running: true, every: frameMs(0), last: 0 };
     this.targets.set(canvas, t);
     this.draw(t, this.time(t));
     this.wake();
   }
   detach(canvas) { this.targets.delete(canvas); }
+  // where the card's name starts (card px): the pattern centres itself between the type label and the name
+  setNameTop(canvas, y) {
+    const t = this.targets.get(canvas);
+    if (!t || !y || Math.abs(t.nameTop - y) < 0.5) return;
+    t.nameTop = y;
+    this.draw(t, this.time(t));
+  }
   // the wheel pauses cards nobody can see, exactly as it pauses SVG patterns
   setRunning(canvas, on) {
     const t = this.targets.get(canvas);
@@ -153,7 +160,7 @@ class ShaderRenderer {
     gl.enableVertexAttribArray(P.pos);
     gl.vertexAttribPointer(P.pos, 2, gl.FLOAT, false, 0, 0);
     gl.uniform1f(P.time, time);
-    gl.uniform3fv(P.ac, t.ac); gl.uniform3fv(P.bg, t.bg); gl.uniform3fv(P.fg, t.fg); gl.uniform3fv(P.param, t.param);
+    gl.uniform3fv(P.ac, t.ac); gl.uniform3fv(P.bg, t.bg); gl.uniform3fv(P.fg, t.fg); gl.uniform3fv(P.param, t.param); gl.uniform2f(P.frame, (30 + t.nameTop) / 2, t.nameTop);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     t.ctx.clearRect(0, 0, t.canvas.width, t.canvas.height);
     t.ctx.drawImage(this.canvas, 0, 0);

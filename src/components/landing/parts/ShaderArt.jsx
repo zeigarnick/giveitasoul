@@ -9,7 +9,14 @@ export function ShaderArt({ program, s }) {
   useLayoutEffect(() => {
     const canvas = ref.current, r = renderer();
     r.attach(canvas, program, s);
-    return () => r.detach(canvas);
+    // where the card's name block starts, so the pattern centres between the type label and the name; again once
+    // the fonts have loaded, since they decide whether the line under the name wraps
+    const nameBlock = canvas.parentElement && canvas.parentElement.lastElementChild;
+    const measure = () => { if (nameBlock) r.setNameTop(canvas, nameBlock.offsetTop); };
+    measure();
+    let live = true;
+    if (document.fonts) document.fonts.ready.then(() => { if (live) measure(); });
+    return () => { live = false; r.detach(canvas); };
   }, [program, s]);
   return <canvas ref={ref} style={{ position: 'absolute', left: '0', top: '0', width: '232px', height: '324px' }} />;
 }

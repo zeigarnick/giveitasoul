@@ -16,6 +16,8 @@ varying vec2 v_uv;
 uniform float u_time;
 uniform vec3 u_ac, u_bg, u_fg;
 uniform vec3 u_param;
+// u_frame: x = the middle of the space between the type label and the name, y = where the name starts (card px)
+uniform vec2 u_frame;
 const float TAU = 6.2831853;
 float hash(vec2 q) { return fract(sin(dot(q, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 q) {
@@ -23,11 +25,16 @@ float noise(vec2 q) {
   return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
 }
 float fbm(vec2 q) { float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++) { s += a * noise(q); q *= 2.03; a *= 0.5; } return s; }
-// the pattern lives in the top of the card; fade it out above the name
-float area(vec2 p) { return 1.0 - smoothstep(196.0, 214.0, p.y); }
+vec2 rawPx() { return vec2(v_uv.x * 232.0, (1.0 - v_uv.y) * 324.0); }
+// The pattern lives between the type label (ends y 30) and the name (starts u_frame.y, lower on cards whose line
+// wraps): it fades in over the 12px under the label and out over the 12px before the 12px above the name, so both
+// gaps match. Measured on the card itself, whatever the pattern's own coordinates.
+float area(vec2 p) { float y = rawPx().y; return smoothstep(30.0, 42.0, y) * (1.0 - smoothstep(u_frame.y - 24.0, u_frame.y - 12.0, y)); }
 // fine film grain so flat colour reads as material, not a screen
 float grain(vec2 p) { return (hash(p + fract(u_time * 7.0) * 97.0) - 0.5) * 0.06; }
-vec2 cardPx() { return vec2(v_uv.x * 232.0, (1.0 - v_uv.y) * 324.0); }
+// Card pixels for drawing, shifted so the pattern's own middle (MID, set per pattern below) sits in the middle of
+// the space between the label and the name.
+vec2 cardPx() { return rawPx() + vec2(0.0, MID - u_frame.x); }
 // antialiased stroke for a distance d from a line of half-width w (in card px)
 float stroke(float d, float w) { return 1.0 - smoothstep(w - 0.6, w + 0.6, d); }
 float fill(float d) { return 1.0 - smoothstep(-0.6, 0.6, d); }
@@ -37,6 +44,8 @@ float roundBox(vec2 p, vec2 c, vec2 hs, float r) { vec2 q = abs(p - c) - hs + r;
 vec2 rot(vec2 v, float a) { float c = cos(a), s = sin(a); return vec2(c * v.x - s * v.y, s * v.x + c * v.y); }
 // a there-and-back loop, 0 → 1 → 0 over period seconds, eased like a wave
 float breathe(float t, float period) { return 0.5 - 0.5 * cos(TAU * t / period); }
+// The pen every card draws with (the Tidewatcher's): a fine line with a soft glow under it. d = distance to the line.
+float ink(float d) { return stroke(d, 0.75) + exp(-d * 0.22) * 0.05; }
 vec4 paint(vec3 col, float a, vec2 p) { a = clamp(a + grain(p), 0.0, 1.0) * area(p); return vec4(col * a, a); }
 `;
 
@@ -71,7 +80,7 @@ void main() {
   float k = floor((p.x - 18.0) / 7.0);
   float cx = 18.0 + k * 7.0 + 3.5;
   float inRange = step(0.0, k) * step(k, 27.0);
-  float h = 48.0 + 64.0 * (0.5 + 0.5 * sin(k * 0.38 - t * 2.1)) + 22.0 * sin(k * 0.93 + t * 1.3);
+  float h = 48.0 + 64.0 * (0.5 + 0.5 * sin(k * 0.38 - t * 1.5)) + 22.0 * sin(k * 0.93 + t * 1.0);
   float top = 210.0 - h;
   float dx = abs(p.x - cx);
   float bar = (1.0 - smoothstep(1.0, 1.9, dx)) * step(top, p.y) * step(p.y, 210.0);
@@ -84,29 +93,26 @@ void main() {
 }
 `;
 
-// Night Owl: stars on a jittered grid that twinkle at their own pace, a nebula drifting slowly, and a crescent moon
-// with a soft halo.
+// The Night Owl: a quiet field of fine horizontal lines carrying one slow, constant wave, calmer than the tide.
+// A still crescent moon is drawn by the lines themselves, brighter where they flow through it, and a few short
+// stretches of line glow like stars, gliding steadily along the rows.
 const owl = HEAD + `
 void main() {
   vec2 p = cardPx();
-  float t = u_time;
-  // stars: one per 22px cell, jittered, some brighter
-  vec2 cell = floor(p / 22.0), f = fract(p / 22.0);
-  float h = hash(cell);
-  vec2 sp = vec2(hash(cell + 3.1), hash(cell + 7.7)) * 0.7 + 0.15;
-  float r = mix(0.02, 0.06, h * h);
-  float tw = 0.35 + 0.65 * (0.5 + 0.5 * sin(t * (0.8 + 2.2 * hash(cell + 1.3)) + h * 6.283));
-  float star = smoothstep(r, 0.0, length(f - sp)) * tw * step(0.35, h);
-  // moon at (150, 80) r 34, bitten by a circle at (166, 68) r 30
-  float dm = length(p - vec2(150.0, 80.0)), db = length(p - vec2(166.0, 68.0));
-  float moon = smoothstep(34.5, 33.5, dm) * smoothstep(29.5, 30.5, db);
-  float halo = exp(-max(dm - 34.0, 0.0) * 0.07) * 0.22 * (1.0 - moon);
-  star *= smoothstep(40.0, 48.0, dm);
-  // nebula
-  float neb = fbm(p * 0.018 + vec2(t * 0.03, -t * 0.02));
-  neb = smoothstep(0.45, 0.85, neb) * 0.16;
-  float a = clamp(star + moon + halo + neb + grain(p), 0.0, 1.0) * area(p);
-  gl_FragColor = vec4(u_ac * a, a);
+  float t = u_time, sp = 8.0;
+  float row = floor(p.y / sp + 0.5);
+  float y0 = row * sp + 1.6 * sin(p.x * 0.035 - t * 0.6 + row * 0.45);
+  float d = abs(p.y - y0);
+  // the crescent: inside the moon, outside the bite
+  vec2 mc = vec2(138.0, 104.0);
+  float moon = (1.0 - smoothstep(41.0, 43.0, length(p - mc))) * smoothstep(35.0, 37.0, length(p - mc - vec2(18.0, -13.0)));
+  // stars: short bright stretches of line drifting left at 9px/s, each row at its own offset
+  float xs = p.x + t * 9.0 + row * 17.0;
+  float cell = floor(xs / 34.0), cx = cell * 34.0 + 17.0;
+  float star = step(0.88, hash(vec2(cell, row))) * (1.0 - smoothstep(2.5, 6.5, abs(xs - cx))) * (1.0 - moon);
+  float lit = 0.18 + 0.75 * moon + 0.7 * star;
+  float a = stroke(d, 0.6) * lit + exp(-d * 0.22) * 0.05 * (moon + star);
+  gl_FragColor = paint(u_ac, a, p);
 }
 `;
 
@@ -116,7 +122,7 @@ void main() {
   vec2 p = cardPx();
   float t = u_time, a = 0.0;
   for (int i = 0; i < 8; i++) {
-    float fi = float(i), y = 44.0 + 20.0 * fi;
+    float fi = float(i), y = 48.0 + 20.0 * fi;
     float u = mod(p.x - t * 13.85 + 9.0 * mod(fi, 4.0), 36.0);
     float d = length(vec2(max(abs(u - 14.0) - 14.0, 0.0), p.y - y));
     float done = smoothstep(0.55, 1.0, 0.5 + 0.5 * sin(t * 1.6 - fi * 0.8));
@@ -129,65 +135,74 @@ void main() {
 // The Trickster: dotted orbits and an arm that swings out and back (eased), planets trailing light.
 const orbit = HEAD + `
 void main() {
-  vec2 p = cardPx(), c = vec2(116.0, 110.0), q = p - c;
+  vec2 p = cardPx(), c = vec2(116.0, 118.0), q = p - c;
   float t = u_time, r = length(q), ang = atan(q.y, q.x);
   float a = 0.0;
   for (int i = 0; i < 2; i++) {
-    float R = i == 0 ? 84.0 : 58.0;
+    float R = i == 0 ? 72.0 : 50.0;
     float s = mod(ang * R, 8.0) - 4.0;
     a = max(a, stroke(length(vec2(s, r - R)), 1.0) * 0.8);
   }
-  a = max(a, stroke(abs(r - 32.0), 0.75));
+  a = max(a, stroke(abs(r - 28.0), 0.75));
   float th = radians(mix(-40.0, 220.0, breathe(t, 14.0)));
-  vec2 p1 = c + rot(vec2(0.0, -84.0), th), p2 = c + rot(vec2(0.0, 84.0), th);
+  vec2 p1 = c + rot(vec2(0.0, -72.0), th), p2 = c + rot(vec2(0.0, 72.0), th);
   a = max(a, stroke(segment(p, p1, p2), 0.5) * 0.35);
   a = max(a, fill(length(p - p1) - 7.0));
   a = max(a, fill(length(p - p2) - 4.0));
   a += exp(-length(p - p1) * 0.12) * 0.35 + exp(-length(p - p2) * 0.18) * 0.2;
-  // trail along the outer orbit, behind the planet in the direction it is moving
+  // trail along the outer orbit, behind the planet in the direction it is moving; it fades as the arm slows to turn
   float dir = sign(sin(TAU * t / 14.0));
   float pa = atan(p1.y - c.y, p1.x - c.x);
   float behind = mod((pa - ang) * dir + TAU, TAU);
-  a += exp(-behind * 3.0) * stroke(abs(r - 84.0), 1.6) * 0.5 * step(0.02, abs(sin(TAU * t / 14.0)));
+  a += exp(-behind * 3.0) * stroke(abs(r - 72.0), 1.6) * 0.5 * smoothstep(0.0, 0.3, abs(sin(TAU * t / 14.0)));
   gl_FragColor = paint(u_ac, a, p);
 }
 `;
 
-// The Tinkerer: two meshing gears turning in opposite directions, lit from the top left like machined metal.
+// The Tinkerer: two meshing gears drawn in outline, turning in opposite directions at the ratio of their teeth
+// (20 and 12), each with a hub ring and a small bright axle.
 const gears = HEAD + `
-float gear(vec2 p, vec2 c, float rIn, float rOut, float period, float tooth, float spin) {
+float profile(float ang, float rIn, float rOut, float teeth) {
+  float w = 0.5 + 0.5 * cos(ang * teeth);
+  return mix(rIn, rOut, smoothstep(0.3, 0.7, w));
+}
+// distance to a gear's toothed outline, corrected for the slope of the teeth so the line keeps one width
+float gearLine(vec2 p, vec2 c, float rIn, float rOut, float teeth, float spin) {
   vec2 q = p - c; float r = length(q), ang = atan(q.y, q.x) + spin;
-  float s = mod(ang * (rIn + rOut) * 0.5, period);
-  float band = step(rIn, r) * step(r, rOut) * step(s, tooth);
-  float shade = 0.75 + 0.25 * cos(atan(q.y, q.x) + 2.4);
-  return band * (1.0 - smoothstep(rOut - 0.8, rOut + 0.4, r)) * shade;
+  float pr = profile(ang, rIn, rOut, teeth), pr2 = profile(ang + 0.01, rIn, rOut, teeth);
+  float slope = (pr2 - pr) / (0.01 * max(r, 1.0));
+  return abs(r - pr) / sqrt(1.0 + slope * slope);
 }
 void main() {
   vec2 p = cardPx();
   float t = u_time, a = 0.0;
   vec2 c1 = vec2(92.0, 96.0), c2 = vec2(166.0, 166.0);
-  a = max(a, gear(p, c1, 43.0, 57.0, 15.7, 9.5, -t * TAU / 14.0));
-  a = max(a, stroke(abs(length(p - c1) - 34.0), 1.5));
-  a = max(a, fill(length(p - c1) - 8.0));
-  a = max(a, gear(p, c2, 22.0, 34.0, 14.6, 7.6, t * TAU / 8.4));
-  a = max(a, fill(length(p - c2) - 6.0));
+  a = max(a, ink(gearLine(p, c1, 45.0, 55.0, 20.0, -t * TAU / 14.0)));
+  a = max(a, ink(abs(length(p - c1) - 30.0)) * 0.6);
+  a = max(a, ink(gearLine(p, c2, 24.0, 33.0, 12.0, t * TAU / 8.4 + 0.13)));
+  a = max(a, ink(abs(length(p - c2) - 12.0)) * 0.6);
+  a = max(a, fill(length(p - c1) - 4.0));
+  a = max(a, fill(length(p - c2) - 3.0));
   gl_FragColor = paint(u_ac, a, p);
 }
 `;
 
-// The Stoic: faint vertical rules and one circle that barely breathes, sending out a slow ripple.
+// The Stoic: faint vertical rules and one circle, drawn in a single line, that barely breathes and sends out a slow
+// ripple; the rules run brighter inside it.
 const still = HEAD + `
 void main() {
   vec2 p = cardPx();
   float t = u_time, a = 0.0;
   float u = mod(p.x - 12.0, 14.0);
   float k = floor((p.x - 12.0) / 14.0 + 0.5);
-  a = stroke(min(u, 14.0 - u), 0.5) * (0.18 + 0.06 * sin(t * 0.4 + k * 0.5)) * step(p.y, 206.0) * step(-0.5, k) * step(k, 15.0);
   vec2 c = vec2(116.0, 104.0);
-  float r = length(p - c);
-  a = max(a, fill(r - (46.0 + 1.4 * breathe(t, 9.0))));
+  float r = length(p - c), R = 46.0 + 1.4 * breathe(t, 9.0);
+  // faint rules, brighter where they pass through the circle
+  float inside = 1.0 - smoothstep(R - 1.0, R + 1.0, r);
+  a = stroke(min(u, 14.0 - u), 0.5) * (0.18 + 0.06 * sin(t * 0.4 + k * 0.5) + 0.45 * inside) * step(-0.5, k) * step(k, 15.0);
+  a = max(a, ink(abs(r - R)));
   float ring = mod(t * 5.0, 60.0);
-  a = max(a, stroke(abs(r - 46.0 - ring), 0.6) * 0.3 * (1.0 - ring / 60.0));
+  a = max(a, stroke(abs(r - 46.0 - ring), 0.6) * 0.3 * smoothstep(0.0, 8.0, ring) * (1.0 - ring / 60.0));
   gl_FragColor = paint(u_ac, a, p);
 }
 `;
@@ -195,12 +210,12 @@ void main() {
 // The Muse: six petals turning slowly, each breathing at its own pace around a pulsing heart.
 const petals = HEAD + `
 void main() {
-  vec2 p = cardPx(), c = vec2(116.0, 110.0);
+  vec2 p = cardPx(), c = vec2(116.0, 118.0);
   float t = u_time, a = 0.0;
   for (int i = 0; i < 6; i++) {
     float fi = float(i);
     vec2 q = rot(p - c, -(radians(fi * 30.0) + t * TAU / 48.0));
-    vec2 ab = vec2(22.0, 80.0 + 4.0 * sin(t * 0.7 + fi * 1.1));
+    vec2 ab = vec2(19.0, 68.0 + 4.0 * sin(t * 0.7 + fi * 1.1));
     float f = length(q / ab) - 1.0;
     float g = length(q / (ab * ab)) / max(length(q / ab), 1e-3);
     a = max(a, stroke(abs(f) / max(g, 1e-3), 0.75));
@@ -212,30 +227,34 @@ void main() {
 }
 `;
 
-// The Cartographer: contour lines over a slowly shifting terrain, a dashed route flowing along the bottom, and a
-// marker at the summit.
+// The Cartographer: clean topographic lines over three smooth hills that drift very slowly, higher contours
+// drawn stronger, a small marker on the summit, and a dashed route flowing along the bottom.
 const contours = HEAD + `
+float hill(vec2 p, vec2 c, float s) { vec2 d = p - c; return exp(-dot(d, d) / (2.0 * s * s)); }
 float height(vec2 p, float t) {
-  vec2 c = vec2(120.0, 114.0);
-  float d = length((p - c) * vec2(1.0, 1.25));
-  return exp(-d * d / 7000.0) * 0.8 + fbm(p * 0.012 + vec2(t * 0.012, -t * 0.008)) * 0.35;
+  return 0.95 * hill(p, vec2(120.0, 96.0) + 5.0 * vec2(sin(t * 0.13), cos(t * 0.11)), 28.0)
+       + 0.72 * hill(p, vec2(68.0, 140.0) + 5.0 * vec2(cos(t * 0.09), sin(t * 0.12)), 19.0)
+       + 0.6 * hill(p, vec2(170.0, 140.0) + 4.0 * vec2(sin(t * 0.1 + 1.0), cos(t * 0.08)), 17.0);
 }
 void main() {
   vec2 p = cardPx();
-  float t = u_time;
+  float t = u_time, a = 0.0;
   float h = height(p, t);
   vec2 g = vec2(height(p + vec2(1.0, 0.0), t) - h, height(p + vec2(0.0, 1.0), t) - h);
-  float v = h * 9.0;
-  float d = abs(fract(v + 0.5) - 0.5) / max(length(g) * 9.0, 1e-3);
-  // contours fade out toward the card's edges, clear of the type label
-  float edge = 1.0 - smoothstep(78.0, 108.0, length((p - vec2(120.0, 110.0)) * vec2(1.0, 1.2)));
-  float a = stroke(d, 0.7) * step(p.y, 176.0) * 0.9 * edge;
-  // the route
-  float ry = 190.0 - 10.0 * sin(p.x * 0.03 + 0.6) - 6.0 * sin(p.x * 0.011);
+  // eight evenly spaced levels; distance to the nearest one in pixels, so every line keeps one width
+  float v = h * 8.0;
+  float d = abs(fract(v + 0.5) - 0.5) / max(length(g) * 8.0, 1e-3);
+  float level = floor(v + 0.5);
+  float lines = ink(d) * step(0.5, level) * (0.4 + 0.08 * level);
+  a = max(a, lines * (1.0 - smoothstep(168.0, 180.0, p.y)));
+  // the summit
+  vec2 top = vec2(120.0, 96.0) + 5.0 * vec2(sin(t * 0.13), cos(t * 0.11));
+  a = max(a, fill(length(p - top) - 2.5));
+  // the route: a dashed line flowing along the bottom
+  float ry = 190.0 - 8.0 * sin(p.x * 0.03 + 0.6) - 5.0 * sin(p.x * 0.011);
+  float span = smoothstep(20.0, 34.0, p.x) * (1.0 - smoothstep(198.0, 212.0, p.x));
   float along = mod(p.x - t * 18.0, 9.0);
-  a = max(a, stroke(abs(p.y - ry), 0.7) * step(along, 3.0));
-  a = max(a, fill(length(p - vec2(120.0, 114.0)) - 3.0));
-  a += exp(-length(p - vec2(120.0, 114.0)) * 0.2) * 0.3 * breathe(t, 2.5);
+  a = max(a, stroke(abs(p.y - ry), 0.7) * step(along, 3.0) * span);
   gl_FragColor = paint(u_ac, a, p);
 }
 `;
@@ -243,20 +262,20 @@ void main() {
 // The Spark: rays wheeling around a pulsing core, each ray flaring on its own beat, sparks blinking at the edges.
 const burst = HEAD + `
 void main() {
-  vec2 p = cardPx(), c = vec2(116.0, 110.0), q = p - c;
+  vec2 p = cardPx(), c = vec2(116.0, 118.0), q = p - c;
   float t = u_time, a = 0.0;
   float spin = t * radians(10.0);
   for (int k = 0; k < 12; k++) {
     float fk = float(k);
-    float len = (mod(fk, 2.0) < 0.5 ? 78.0 : 58.0) + 8.0 * sin(t * 2.6 + fk * 1.7);
+    float len = (mod(fk, 2.0) < 0.5 ? 64.0 : 48.0) + 7.0 * sin(t * 1.6 + fk * 1.7);
     vec2 dir = rot(vec2(1.0, 0.0), radians(fk * 30.0) + spin);
-    a = max(a, stroke(segment(p, c + dir * 30.0, c + dir * len), 2.0));
+    a = max(a, ink(segment(p, c + dir * 26.0, c + dir * len)));
   }
   float core = length(q) - (13.0 + 6.0 * breathe(t, 1.5));
   a = max(a, fill(core));
   a += exp(-max(core, 0.0) * 0.08) * 0.35;
   vec3 sp[4];
-  sp[0] = vec3(40.0, 40.0, 1.8); sp[1] = vec3(196.0, 58.0, 2.2); sp[2] = vec3(190.0, 190.0, 2.0); sp[3] = vec3(34.0, 178.0, 1.6);
+  sp[0] = vec3(38.0, 56.0, 1.8); sp[1] = vec3(196.0, 66.0, 2.2); sp[2] = vec3(192.0, 180.0, 2.0); sp[3] = vec3(34.0, 172.0, 1.6);
   for (int i = 0; i < 4; i++) {
     float blink = breathe(t + float(i) * 0.7, sp[i].z);
     a = max(a, fill(length(p - sp[i].xy) - 3.0) * blink);
@@ -266,102 +285,126 @@ void main() {
 }
 `;
 
-// The Gardener: a grid of seeds swelling and settling in a diagonal wave, each with a soft halo.
+// The Neighbour: straight, evenly spaced lines with smooth little waves passing along them in turns, each line
+// the other way from the one above, like friendly chatter going back and forth down the street.
 const dots = HEAD + `
 void main() {
   vec2 p = cardPx();
-  float t = u_time;
-  vec2 cell = floor((p - vec2(26.0, 25.0)) / vec2(36.0, 42.0));
-  cell = clamp(cell, vec2(0.0), vec2(4.0, 3.0));
-  vec2 c = vec2(44.0, 46.0) + cell * vec2(36.0, 42.0);
-  float r = 2.0 + 6.0 * breathe(t + 0.3 * (cell.x + cell.y), 3.2);
-  float d = length(p - c) - r;
-  float a = fill(d) + exp(-max(d, 0.0) * 0.3) * 0.25 * r / 8.0;
-  gl_FragColor = paint(u_ac, a, p);
+  float t = u_time, a = 0.0, glow = 0.0;
+  for (int i = 0; i < 12; i++) {
+    float fi = float(i), y0 = 52.0 + 13.0 * fi, dir = mod(fi, 2.0) < 0.5 ? 1.0 : -1.0;
+    // one wave per line, travelling 18px/s over a 320px loop that starts and ends off the card
+    float c = mod(t * 18.0 + fi * 71.0, 320.0) - 44.0;
+    float px = dir > 0.0 ? c : 232.0 - c;
+    float g = exp(-pow((p.x - px) / 11.0, 2.0));
+    float bump = 5.0 * g, slope = -2.0 * (p.x - px) / 121.0 * bump;
+    float d = abs(p.y - (y0 - bump)) / sqrt(1.0 + slope * slope);
+    a = max(a, stroke(d, 0.75) * (0.4 + 0.55 * g));
+    glow += exp(-d * 0.22) * 0.03 * (0.5 + g);
+  }
+  gl_FragColor = paint(u_ac, a + glow, p);
 }
 `;
 
-// The Scout: four zigzag trails heading right, as if tracking a path across the map.
+// The Wildflower: a field of fine stems of varying height, bending together as a breeze travels through, each
+// swaying a little on its own too; brighter toward their tips.
 const zigzag = HEAD + `
 void main() {
   vec2 p = cardPx();
-  float t = u_time, a = 0.0;
-  for (int i = 0; i < 4; i++) {
-    float base = 50.0 + 40.0 * float(i);
-    float u = (p.x + 40.0 - t * 25.0) / 40.0;
-    float y = base - 12.0 * (1.0 - abs(2.0 * fract(u) - 1.0));
-    a = max(a, stroke(abs(p.y - y) * 0.857, 1.1));
+  float t = u_time, a = 0.0, ground = 214.0;
+  for (int i = 0; i < 26; i++) {
+    float fi = float(i);
+    float x0 = 14.0 + 8.0 * fi + 3.0 * (hash(vec2(fi, 1.0)) - 0.5);
+    float hgt = 70.0 + 55.0 * (0.5 + 0.5 * sin(fi * 0.55 + 1.0)) + 30.0 * hash(vec2(fi, 2.0));
+    float sway = 0.16 * sin(t * 0.8 - x0 * 0.025) + 0.05 * sin(t * 1.9 + fi * 1.7);
+    float s = clamp((ground - p.y) / hgt, 0.0, 1.0);
+    float xs = x0 + sway * hgt * s * s;
+    float d = abs(p.x - xs) / sqrt(1.0 + pow(2.0 * sway * s, 2.0));
+    a = max(a, ink(d) * step(ground - hgt, p.y) * (0.3 + 0.65 * s));
   }
   gl_FragColor = paint(u_ac, a, p);
 }
 `;
 
-// The Critic: diagonal rules and a red-pen stroke sweeping across; the lines it has marked glow and fade.
+// The Vanguard: nested wide chevrons pointing up, marching forward in step, straight and sharp; the lines at the
+// front burn brightest, each point catches the light, and every few seconds a glint sweeps across like a blade edge. They enter at the bottom and leave at the top behind the card's fades, so it loops unseen.
 const slash = HEAD + `
 void main() {
   vec2 p = cardPx();
-  float t = u_time;
-  float cpos = p.x + p.y;
-  float k = floor((cpos - 30.0) / 30.0 + 0.5);
-  float lc = 30.0 + 30.0 * k;
-  float inside = step(10.0, p.y) * step(p.y, 210.0) * step(-0.5, k) * step(k, 13.5);
-  float pen = 210.0 + mix(-260.0, 260.0, fract(t / 3.4));
-  float lit = exp(-max(pen - lc, 0.0) / 70.0) * step(lc, pen + 8.0);
-  float a = stroke(abs(cpos - lc) / 1.4142, 0.75) * inside * (0.55 + 0.45 * lit);
-  float penD = segment(p, vec2(pen - 210.0, 210.0), vec2(pen - 10.0, 10.0));
-  a = max(a, fill(penD - 6.0));
-  a += exp(-max(penD - 6.0, 0.0) * 0.12) * 0.3;
+  float t = u_time, slope = 0.42, sp = 15.0;
+  // constant along each chevron; the chevrons march up by one spacing every 1.1s
+  float v = p.y + slope * abs(p.x - 116.0) + t * 16.0;
+  float d = abs(fract(v / sp) - 0.5) * sp / sqrt(1.0 + slope * slope);
+  float lineY = p.y + (0.5 - fract(v / sp)) * sp;
+  float front = 0.35 + 0.65 * (1.0 - smoothstep(50.0, 200.0, lineY + slope * abs(p.x - 116.0)));
+  // each chevron's point catches the light, and every few seconds a glint sweeps across like light along a blade
+  float point = exp(-abs(p.x - 116.0) * 0.08) * 0.35;
+  float gx = mix(-60.0, 292.0, clamp(fract(t / 4.5) / 0.55, 0.0, 1.0));
+  float glint = exp(-pow((p.x + 0.35 * p.y - gx) / 16.0, 2.0)) * 0.9;
+  float a = ink(d) * min(front + point + glint, 1.4);
   gl_FragColor = paint(u_ac, a, p);
 }
 `;
 
-// The Keeper: a 4×4 grid of tiles filling in reading order and holding, like a checklist kept.
+// The Hearth: horizontal lines rising slowly like heat, bowing upward over a warm centre and shimmering gently,
+// strongest near the bottom where the warmth comes from, with a soft glow beneath.
 const grid = HEAD + `
 void main() {
   vec2 p = cardPx();
-  float t = u_time;
-  vec2 cell = clamp(floor((p - vec2(34.0, 22.0)) / 40.0), vec2(0.0), vec2(3.0));
-  vec2 c = vec2(54.0, 42.0) + cell * 40.0;
-  float i = cell.y * 4.0 + cell.x;
-  float f = fract(t / 6.0 + i * 0.35 / 6.0);
-  float on = f < 0.15 ? smoothstep(0.0, 0.15, f) : (f < 0.7 ? 1.0 : 1.0 - smoothstep(0.7, 1.0, f));
-  float d = roundBox(p, c, vec2(14.0), 7.0);
-  float a = fill(d) * (0.15 + 0.85 * on) + exp(-max(d, 0.0) * 0.35) * 0.2 * on;
-  gl_FragColor = paint(u_ac, a, p);
+  float t = u_time, a = 0.0, glow = 0.0, sp = 11.0;
+  float lift = t * 12.0;
+  for (int i = 0; i < 24; i++) {
+    float fi = float(i);
+    // each line rises and wraps from top to bottom, out of sight behind the fades
+    float yb = 250.0 - mod(fi * sp + lift, 24.0 * sp);
+    float heat = smoothstep(20.0, 230.0, yb);
+    float bow = 12.0 * exp(-pow((p.x - 116.0) / 62.0, 2.0)) * heat;
+    float y = yb - bow - 2.6 * heat * sin(p.x * 0.065 + t * 1.1 + fi * 1.7);
+    float d = abs(p.y - y);
+    a = max(a, stroke(d, 0.75) * (0.3 + 0.6 * heat));
+    glow += exp(-d * 0.22) * 0.03 * heat;
+  }
+  glow += exp(-length((p - vec2(116.0, 214.0)) * vec2(1.0, 1.8)) * 0.02) * 0.16 * (0.85 + 0.15 * breathe(t, 5.0));
+  gl_FragColor = paint(u_ac, a + glow, p);
 }
 `;
 
-// The Confidant: nested rounded squares whose outlines pulse inward toward a solid centre, like holding space.
+// The Mentor: arcs spreading continuously from a point below the card, like a voice carrying; every third arc rings
+// stronger, a beat of encouragement, and the arcs grow brighter as they travel out.
 const nest = HEAD + `
 void main() {
-  vec2 p = cardPx(), c = vec2(116.0, 112.0);
-  float t = u_time, a = 0.0;
-  for (int i = 0; i < 4; i++) {
-    float fi = float(i);
-    float hs = 90.0 - 18.0 * fi;
-    float d = roundBox(p, c, vec2(hs), 40.0 - 8.0 * fi);
-    float o = 0.25 + 0.75 * breathe(t - 0.3 * fi, 3.0);
-    a = max(a, stroke(abs(d), 0.8) * o);
-    a += exp(-abs(d) * 0.3) * 0.08 * o;
-  }
-  a = max(a, fill(roundBox(p, c, vec2(18.0), 10.0)));
+  vec2 p = cardPx();
+  float t = u_time, sp = 13.0;
+  vec2 S = vec2(116.0, 236.0);
+  float r = length(p - S);
+  float u = (r - t * 15.0) / sp;
+  float d = abs(fract(u) - 0.5) * sp;
+  float beat = mod(floor(u + 0.5), 3.0) < 0.5 ? 1.0 : 0.5;
+  float out_ = smoothstep(20.0, 170.0, r);
+  float a = ink(d) * beat * (0.35 + 0.65 * out_) * smoothstep(12.0, 30.0, r);
   gl_FragColor = paint(u_ac, a, p);
 }
 `;
 
-// The Showrunner: rows of chevrons rushing right, with a streak behind each.
+// The Showrunner: rows of chevrons pushing right in quick, eased beats (move, hold, move), each row a beat behind
+// the one above; a fine tail runs out behind each chevron while it moves.
 const chevrons = HEAD + `
 void main() {
   vec2 p = cardPx();
   float t = u_time, a = 0.0;
   for (int i = 0; i < 3; i++) {
-    float y0 = 38.0 + 58.0 * float(i);
-    float x = mod(p.x - t * 51.4, 36.0);
+    float fi = float(i), y0 = 50.0 + 52.0 * fi;
+    // one slot (36px) per beat: a fast ease-out push, then a hold
+    float bt = t * 1.0 - fi * 0.18, f = fract(bt), m = 1.0 - pow(1.0 - clamp(f / 0.45, 0.0, 1.0), 3.0);
+    float off = 36.0 * (floor(bt) + m);
+    float speed = f < 0.45 ? 3.0 * pow(1.0 - f / 0.45, 2.0) : 0.0;
+    float x = mod(p.x - off, 36.0);
     vec2 q = vec2(x, p.y);
-    float d = min(segment(q, vec2(4.0, y0), vec2(18.0, y0 + 14.0)), segment(q, vec2(18.0, y0 + 14.0), vec2(4.0, y0 + 28.0)));
-    a = max(a, stroke(d, 2.5));
-    float streak = step(y0, p.y) * step(p.y, y0 + 28.0) * smoothstep(0.0, 14.0, x) * (1.0 - step(18.0, x));
-    a = max(a, streak * 0.12 * (1.0 - abs(p.y - y0 - 14.0) / 14.0));
+    float d = min(segment(q, vec2(6.0, y0), vec2(20.0, y0 + 14.0)), segment(q, vec2(20.0, y0 + 14.0), vec2(6.0, y0 + 28.0)));
+    a = max(a, ink(d));
+    // while it moves, a fine tail runs out behind the chevron's point
+    float tail = smoothstep(-8.0, 18.0, x) * (1.0 - smoothstep(18.0, 20.0, x));
+    a = max(a, ink(abs(p.y - y0 - 14.0)) * tail * 0.6 * min(speed, 1.0));
   }
   gl_FragColor = paint(u_ac, a, p);
 }
@@ -403,7 +446,17 @@ void main() {
 const ENNEA_LINES = { 1: [4, 7], 2: [4, 8], 3: [6, 9], 4: [1, 2], 5: [7, 8], 6: [3, 9], 7: [1, 5], 8: [2, 5], 9: [3, 6] };
 export const paramsFor = (soul) => (soul.kind === 'ennea' ? [soul.num || 9, ...ENNEA_LINES[soul.num || 9]] : [0, 0, 0]);
 
-export const PROGRAMS = { tide, ember, owl, dashes, orbit, gears, still, petals, contours, burst, dots, zigzag, slash, grid, nest, chevrons, ennea };
+// Each pattern's own vertical middle (the middle of what it draws, in its coordinates), which cardPx() centres
+// between the type label and the name. Night Owl's sky has no middle: it stays where it is.
+const MIDS = {
+  tide: 122, ember: 143, owl: 'u_frame.x', dashes: 118, orbit: 118, gears: 120, still: 104, petals: 118, contours: 118,
+  burst: 118, dots: 124, zigzag: 124, slash: 124, grid: 124, nest: 124, chevrons: 116, ennea: 112
+};
+const RAW = { tide, ember, owl, dashes, orbit, gears, still, petals, contours, burst, dots, zigzag, slash, grid, nest, chevrons, ennea };
+export const PROGRAMS = Object.fromEntries(Object.entries(RAW).map(([k, src]) => {
+  const mid = typeof MIDS[k] === 'number' ? MIDS[k].toFixed(1) : MIDS[k];
+  return [k, '#define MID ' + mid + '\n' + src];
+}));
 
 // which card patterns have a shader
 export const SHADER_FOR_KIND = {
