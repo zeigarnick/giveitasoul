@@ -19,7 +19,9 @@ class ShaderRenderer {
     this.targets = new Map();
     this.programs = {};
     this.raf = 0;
-    this.t0 = performance.now();
+    // the pattern clock (seconds): it runs while cards draw and pauses while the loop sleeps, so patterns carry on
+    // from where they stopped instead of jumping ahead
+    this.clock = 0; this.lastMs = 0; this.busy = false;
     this.rm = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.scale = clampScale(1.5);
     this.loop = (now) => { this.raf = 0; this.frame(now); };
@@ -85,14 +87,19 @@ class ShaderRenderer {
 
   now() {
     // reduced motion: one still moment
-    return this.rm.matches ? 1.2 : (performance.now() - this.t0) / 1000;
+    return this.rm.matches ? 1.2 : this.clock;
   }
+
+  // While the fan moves, every card keeps animating but redraws half as often (the centre card at 30fps): a moving
+  // card hides the lower rate, and it frees the phone's GPU for the swipe itself (on iPhones copying each card out
+  // of the shared canvas is costly too).
+  setBusy(on) { this.busy = on; }
 
   // A card's canvas joins; it draws straight away and keeps drawing while running.
   attach(canvas, name, soul) {
     if (!this.supported()) return;
     canvas.width = this.canvas.width; canvas.height = this.canvas.height;
-    const t = { canvas, ctx: canvas.getContext('2d'), name, ac: hex(soul.ac), bg: hex(soul.bg), fg: hex(soul.fg), param: paramsFor(soul), running: true, every: 0, last: 0 };
+    const t = { canvas, ctx: canvas.getContext('2d'), name, ac: hex(soul.ac), bg: hex(soul.bg), fg: hex(soul.fg), param: paramsFor(soul), running: true, every: frameMs(0), last: 0 };
     this.targets.set(canvas, t);
     this.draw(t, this.now());
     this.wake();
@@ -111,15 +118,20 @@ class ShaderRenderer {
   }
 
   frame() {
-    if (this.lost) return;
-    const time = this.now(), ms = performance.now();
+    if (this.lost) { this.lastMs = 0; return; }
+    const ms = performance.now();
+    // advance the clock by at most one 30fps frame, so a sleep doesn't make patterns jump
+    if (this.lastMs) this.clock += Math.min(ms - this.lastMs, 1000 / 30) / 1000;
+    this.lastMs = ms;
+    const time = this.now();
     let any = false;
     this.targets.forEach((t) => {
       if (!t.running) return;
       any = true;
-      if (ms - t.last >= t.every) { t.last = ms; this.draw(t, time); }
+      const every = this.busy ? Math.max(t.every * 2 + 2, 1000 / 30 - 2) : t.every;
+      if (ms - t.last >= every) { t.last = ms; this.draw(t, time); }
     });
-    if (any && !this.rm.matches) this.wake();
+    if (any && !this.rm.matches) this.wake(); else this.lastMs = 0;
   }
 
   draw(t, time) {

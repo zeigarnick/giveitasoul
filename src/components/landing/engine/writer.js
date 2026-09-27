@@ -45,9 +45,11 @@ export function createWriter() {
         paused[i] = want;
         hold(svg, want, rm);
       });
-      // the open window's shader copy draws only while the window shows
-      const artCanvas = els.art && els.art.querySelector('canvas');
-      if (artCanvas) { renderer().setDistance(artCanvas, 0); renderer().setRunning(artCanvas, f.st.sheet.visibility === 'visible'); }
+      // the open window's shader copies (its card, and the one on the flip side) draw only while the window shows
+      if (els.sheet) {
+        const on = f.st.sheet.visibility === 'visible';
+        els.sheet.querySelectorAll('canvas').forEach((cv) => { renderer().setDistance(cv, 0); renderer().setRunning(cv, on); });
+      }
       if (artPaused !== rm) {
         const svg = els.art && els.art.querySelector('svg');
         if (svg) { artPaused = rm; hold(svg, rm, rm); }

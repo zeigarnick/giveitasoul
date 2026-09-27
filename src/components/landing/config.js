@@ -44,7 +44,7 @@ export const LAYOUTS = {
     tgTop: 16, tgW0: 76, tgW1: 112, tgFs: 13, tgRight: 20, label: 372, bottom: 28, counterW: 72,
     hint: '', dragK: 1.04, flick: 1, spin: { response: 0.55, damping: 0.95 }, nearY: 270,
     sheet: { row: false, PAD: 20, GAP: 20, ART: 0.8, cy: 440, MARGIN: 20 }, nameFs: 34, nameLh: 38,
-    shaderScale: 2.5
+    shaderScale: 2
   }
 };
 export const PHONE_QUERY = '(max-width: 700px)';

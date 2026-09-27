@@ -252,6 +252,8 @@ export class WheelEngine {
     for (const [x, v, t] of [['tx', 'txv', aim.x], ['ty', 'tyv', aim.y], ['gl', 'glv', aim.g]]) if (Math.abs(p[v]) < 0.002 && Math.abs(p[x] - t) < 0.0006) { p[x] = t; p[v] = 0; }
     const liveV = p.drag ? p.drag.vel : p.v;
     p.sv += (liveV - p.sv) * Math.min(1, dt * 14);
+    // card patterns redraw less often while the fan spins, sinks or rises (see renderer.setBusy)
+    renderer().setBusy(!open && ((p.drag && p.drag.axis === 'x') || Math.abs(p.sv) > 0.08 || Math.abs(p.v) > 0.05 || (p.sink || 0) > 0.001 || !!p.gs));
 
     if (this.pendingOpen != null && !open) {
       const N = this.souls.length;
