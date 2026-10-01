@@ -1,60 +1,50 @@
 # giveitasoul
 
-Give your AI agents a soul. A catalog of SOUL.md personalities for personal AI agents, starting with 16 MBTI souls and 9 Enneagram souls.
+**A personality picker for AI agents. Spin a wheel of cards, pick a soul, hand your agent a SOUL.md.**
 
-## The landing page
+[giveitasoul.com](https://giveitasoul.com) · made by [Nick Sng](https://x.com/wzsng)
 
-Built with [Astro](https://astro.build) and one React island (`src/components/landing/Landing.jsx`).
+## Why I made this
 
-- **The wheel:** spin the fan by dragging, scrolling or ← →. Springs are integrated at 240 Hz; flicks carry momentum.
-- **Open a soul:** tap the centre card, or swipe it up. The card lifts, then the details window unfolds around it.
-- **Close:** pull the window down by its pill (or anywhere on it), tap outside, or press Esc.
-- **Switch deck:** use the MBTI / Enneagram toggle, or pull the fan down. The cards drape down a short way on a chain of springs and fade out, the deck name rolls over to the new one, and the other deck rises into place, fading in.
-- **Idle hint:** when nothing has been touched for a while, the centre card lifts a little to suggest swiping up.
-- **Open/close motion:** the details text blends in and shrinks out like Dynamic Island content, with less bounce opening the window and a little more closing it. Other variants (including the original Tuned motion) are in `MOTIONS` in `config.js`; `MOTION` picks one.
-- **Phone:** below 700px wide the page uses a 390×844 artboard (see `LAYOUTS` in `config.js`), with the centre card the size of Interface Craft's (300×420 on a 390×844 phone), and a flick moves one card at a time.
-- **Card artwork:** each soul's pattern is a shader, drawn by one shared WebGL context and copied into the visible cards. Only the centre card (up to 60fps) and the open window animate; the other cards hold their last frame, and each soul's pattern picks up where it left off when its card reaches the centre. Without WebGL, or with `?art=svg` in the URL, the SVG patterns are used.
-- **Reduced motion:** with the system setting on, the wheel skips its spin-in and idle hint, springs settle without overshoot, the fan doesn't lean, and each card pattern holds still.
+Personal AI agents like Instinct, Muse and Grokbot are taking off, and the more of them I used, the more I noticed that the thing that makes one feel like *someone* is its SOUL.md: the short file that tells it who it is, how it talks and what it cares about. Most people never write one, so their agent sounds like everybody else's.
 
-The page is designed on a 1440×900 stage (390×844 on phones) and scaled to fit the window; on wide or tall windows the fan and fades run to the real window edges.
+So I set out to make picking one fun. giveitasoul has 25 ready-made souls, one for each of the 16 MBTI types and the 9 Enneagram types. Each has a name, a line it would say, a few notes on what it's like to talk to, and a SOUL.md you can copy, download or link straight to your agent.
 
-## For AI agents and search engines
+## What I learned
 
-Everything is built from `site` in `astro.config.mjs` (https://giveitasoul.com) and `src/lib/site.js`.
+It's a toy, and it turns out to be more of a toy than I expected. Agents don't really *become* an MBTI or Enneagram type when you tell them to. Research on LLM personality keeps finding the same gap: a persona prompt changes how a model **describes** itself (it will happily answer a personality test "in character"), but its actual behaviour barely moves.
 
-- `/llms.txt` ([llmstxt.org](https://llmstxt.org)): what the site is, how to install a soul, and every soul's SOUL.md link. `/llms-full.txt` has every SOUL.md in one file; `/index.md` is the homepage as markdown; `/souls/<slug>.md` is each soul's file.
-- Every page has a canonical link, Open Graph and Twitter tags, a link to its markdown version and JSON-LD (the site and its list of souls on the homepage; each soul and its breadcrumbs on its page). See `src/components/seo/Seo.astro`.
-- Social previews: `/og/<slug>.png` for each soul and `/og/home.png`, 1200×630, drawn at build time in the site's typefaces and each soul's colours (Satori and resvg; `src/lib/og.js`).
-- `/sitemap.xml` lists every page; `/robots.txt` welcomes all crawlers, AI ones included.
-- `/_headers` (Cloudflare Pages) serves the files agents read as UTF-8 markdown that any origin can fetch.
-- The homepage wheel is drawn by script, so the page also carries every soul as plain links for screen readers and crawlers.
+- [The Personality Illusion: Revealing Dissociation Between Self-Reports & Behavior in LLMs](https://arxiv.org/abs/2509.03730) (2025): models report stable traits, persona prompts shift those reports, but neither reliably predicts what the model does.
+- [Is Self-knowledge and Action Consistent or Not: Investigating Large Language Model's Personality](https://arxiv.org/abs/2402.14679) (2024): the traits a model claims and the choices it makes often don't line up.
 
-## Structure
+So each soul is written as concrete behaviour (what it believes, how it talks, what it will never do) rather than leaning on the type label, and the label stays what it is: a fun way to browse.
+
+## What I built
+
+The interesting part is the interaction design. The whole page is one hand-built physics toy:
+
+- **A wheel of cards you can throw.** Drag, scroll or use the arrow keys; springs run at 240 Hz and flicks carry momentum. No animation library: the spring, easing and ring maths are written from scratch.
+- **Cards that open into a sheet.** Tap or swipe up the centre card and it lifts, then the details window unfolds around it, Dynamic Island style. Pull it down by its handle to close.
+- **Switching decks by pulling the fan down.** The cards drape down on a chain of springs, the deck name rolls over and the other deck rises in.
+- **Live card artwork.** Each soul's pattern is a WebGL shader. One shared GL context draws them all and copies into the visible cards; only the centre card animates, and each pattern picks up where it left off when it comes back round. SVG fallback without WebGL.
+- **Phone and reduced motion treated as first-class.** A separate 390×844 layout for phones, and with reduced motion on the wheel skips its flourishes and springs settle without overshoot.
+- **Readable by people, search engines and agents.** Each soul has its own page and raw `.md` file, plus `llms.txt`, a sitemap, JSON-LD and social preview images drawn at build time in the site's own typefaces.
+
+## Stack
+
+[Astro](https://astro.build) with one React island for the wheel, plain CSS, hand-written WebGL shaders, and Satori + resvg for the social images. Deployed as a static site on Cloudflare Pages.
 
 ```
 src/
-  pages/index.astro                 page shell, fonts, stage scaling
-  pages/souls/[slug].astro          a page for each soul; [slug].md.ts serves its SOUL.md
-  pages/llms.txt.ts, llms-full.txt.ts, index.md.ts, sitemap.xml.ts, robots.txt.ts, [file].ts (_headers)
-  pages/og/[slug].png.ts            social preview images, drawn by lib/og.js
-  lib/site.js                       site name, address and description; every soul with its addresses
-  components/seo/Seo.astro          meta tags, canonical link and structured data for a page
   components/landing/
-    Landing.jsx                     lays out the stage from the parts below
-    useWheel.js                     connects the wheel engine to React
-    config.js                       the tuned feel, desktop/phone layouts, motion variants, hero typefaces
-    landing.css                     static styles; anything that moves is set inline by the engine
-    SoulCard.jsx                    a soul card: its pattern, type and name
-    engine/WheelEngine.js           physics loop, gestures, open/close and deck-switch state
-    engine/frame.js                 turns engine state into each element's styles
-    engine/writer.js                writes those styles to the DOM, pauses hidden card patterns
-    engine/spring.js                spring, easing and ring maths
-    shaders/                        one shared WebGL renderer and a shader per card pattern (SVG patterns are the fallback)
-    parts/                          TopBar, DeckToggle, Hero, DeckFlip, CardFan, DetailsSheet, BottomBar, patterns
-  data/souls.js                     the MBTI and Enneagram decks
+    engine/      physics loop, gestures, spring maths, and the DOM writer
+    shaders/     shared WebGL renderer and one shader per card pattern
+    parts/       the pieces of the page: top bar, deck toggle, card fan, details sheet…
+  data/souls/    the 25 SOUL.md files
+  pages/         the homepage, a page per soul, llms.txt, sitemap, social images
 ```
 
-## Develop
+## Run it
 
 ```sh
 npm install
