@@ -12,7 +12,7 @@ So I set out to make picking one fun. giveitasoul has 25 ready-made souls, one f
 
 ## What I learned
 
-It's a toy, and it turns out to be more of a toy than I expected. Agents don't really *become* an MBTI or Enneagram type when you tell them to. Research on LLM personality keeps finding the same gap: a persona prompt changes how a model **describes** itself (it will happily answer a personality test "in character"), but its actual behaviour barely moves.
+giveitasoul was always meant to be just for fun, and it turns out the type labels matter even less than I expected. Agents don't really *become* an MBTI or Enneagram type when you tell them to. Research on LLM personality keeps finding the same gap: a persona prompt changes how a model **describes** itself (it will happily answer a personality test "in character"), but its actual behaviour barely moves.
 
 - [The Personality Illusion: Revealing Dissociation Between Self-Reports & Behavior in LLMs](https://arxiv.org/abs/2509.03730) (2025): models report stable traits, persona prompts shift those reports, but neither reliably predicts what the model does.
 - [Is Self-knowledge and Action Consistent or Not: Investigating Large Language Model's Personality](https://arxiv.org/abs/2402.14679) (2024): the traits a model claims and the choices it makes often don't line up.
