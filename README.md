@@ -21,7 +21,7 @@ So each soul is written as concrete behaviour (what it believes, how it talks, w
 
 ## What I built
 
-The interesting part is the interaction design. The whole page is one hand-built physics toy:
+Most of my time went into exploring the UI and motion design: trying layouts, tuning how things move, and iterating until picking a soul felt playful rather than like scrolling a list. The whole page ended up as one hand-built physics toy:
 
 - **A wheel of cards you can throw.** Drag, scroll or use the arrow keys; springs run at 240 Hz and flicks carry momentum. No animation library: the spring, easing and ring maths are written from scratch.
 - **Cards that open into a sheet.** Tap or swipe up the centre card and it lifts, then the details window unfolds around it, Dynamic Island style. Pull it down by its handle to close.
