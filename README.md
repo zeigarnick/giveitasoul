@@ -21,7 +21,7 @@ So each soul is written as concrete behaviour (what it believes, how it talks, w
 
 ## What I built
 
-Most of my time went into exploring the UI and motion design: trying layouts, tuning how things move, and iterating until picking a soul felt playful rather than like scrolling a list. The card design is inspired by Josh Puckett's [Interface Craft](https://www.interfacecraft.dev/). The whole page ended up as one hand-built physics toy:
+Most of my time went into exploring the UI and motion design. The project doubled as a place to put Josh Puckett's [Interface Craft](https://www.interfacecraft.dev/) into practice: the card design and many of the motion and design principles here come from his teaching, and I used giveitasoul to experiment with them, trying layouts, tuning how things move, and iterating until picking a soul felt playful rather than like scrolling a list. What came out of it:
 
 - **A wheel of cards you can throw.** Drag, scroll or use the arrow keys; springs run at 240 Hz and flicks carry momentum. No animation library: the spring, easing and ring maths are written from scratch.
 - **Cards that open into a sheet.** Tap or swipe up the centre card and it lifts, then the details window unfolds around it, Dynamic Island style. Pull it down by its handle to close.
