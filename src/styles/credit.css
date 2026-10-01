@@ -1,0 +1,15 @@
+/* "created by Nick Sng" with an X link: top right of the landing page, footer of each soul page */
+.credit { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border: 1px solid #CFC6B6; border-radius: 99px; color: #141210; text-decoration: none; white-space: nowrap; transition: border-color 160ms ease, background-color 160ms ease; }
+.credit:hover { border-color: #141210; background: rgba(20, 18, 16, 0.04); }
+.credit:focus-visible { outline: 2px solid #D22E1E; outline-offset: 2px; }
+.credit-by { font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #6B6358; }
+.credit-name { font-family: 'Instrument Serif', Georgia, serif; font-size: 19px; line-height: 1; letter-spacing: -0.02em; }
+.credit-x { color: #141210; opacity: 0.55; transition: opacity 160ms ease; }
+.credit:hover .credit-x { opacity: 1; }
+.credit-handle { font-family: 'Geist Mono', monospace; font-size: 12px; color: #6B6358; }
+/* phone landing: plain text under the logo */
+.credit-byline { height: auto; padding: 0; gap: 5px; border: 0; }
+.credit-byline:hover { background: none; }
+.credit-byline .credit-by { font-size: 10px; }
+.credit-byline .credit-name { font-size: 15px; }
+.credit-byline .credit-x { width: 10px; height: 10px; }

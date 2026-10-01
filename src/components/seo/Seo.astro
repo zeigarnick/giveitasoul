@@ -21,6 +21,7 @@ const imageUrl = absolute(image);
 <title>{title}</title>
 <meta name="description" content={description} />
 <link rel="canonical" href={url} />
+<meta name="author" content={SITE.creator.name} />
 <meta name="robots" content="index, follow, max-image-preview:large" />
 <meta property="og:site_name" content={SITE.name} />
 <meta property="og:type" content={type} />
@@ -34,6 +35,7 @@ const imageUrl = absolute(image);
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content={imageAlt} />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:creator" content={SITE.creator.handle} />
 <meta name="twitter:title" content={title} />
 <meta name="twitter:description" content={description} />
 <meta name="twitter:image" content={imageUrl} />

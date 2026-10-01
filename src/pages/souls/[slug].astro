@@ -4,7 +4,8 @@ import SoulCard from '../../components/landing/SoulCard.jsx';
 import { MBTI, ENNEAGRAM } from '../../data/souls.js';
 import { SOUL_FILES, soulSlug, soulPrompt } from '../../lib/souls.js';
 import Seo from '../../components/seo/Seo.astro';
-import { SITE, absolute, typeLabel } from '../../lib/site.js';
+import { SITE, absolute, typeLabel, creatorLd } from '../../lib/site.js';
+import '../../styles/credit.css';
 
 export function getStaticPaths() {
   const decks = [
@@ -44,6 +45,7 @@ const jsonLd = [
     genre: `${deck} ${type}`,
     keywords: ['SOUL.md', 'AI agent personality', deck, type],
     inLanguage: 'en',
+    author: creatorLd(),
     isPartOf: { '@type': 'WebSite', name: SITE.name, url: SITE.url },
     encoding: { '@type': 'MediaObject', encodingFormat: 'text/markdown', contentUrl: absolute(`/souls/${slug}.md`) },
   },
@@ -124,6 +126,15 @@ const jsonLd = [
         <a href={`/souls/${soulSlug(next.name)}/`} class="pager-link is-next"><span class="pager-dir">Next →</span><span class="pager-name">{next.name}</span></a>
       </nav>
     </main>
+
+    <footer class="foot">
+      <a href={SITE.creator.url} class="credit" target="_blank" rel="author noopener">
+        <span class="credit-by">created by</span>
+        <span class="credit-name">{SITE.creator.name}</span>
+        <svg class="credit-x" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+        <span class="credit-handle">{SITE.creator.handle}</span>
+      </a>
+    </footer>
 
     <script is:inline define:vars={{ slug, prompt: soulPrompt(soul.name, md) }}>
       (function () {
@@ -209,6 +220,8 @@ const jsonLd = [
   .pager-link:hover .pager-name { color: #4A443C; }
   .pager-count { font-family: 'Geist Mono', monospace; font-size: 12px; color: #6B6358; }
 
+  .foot { max-width: 1120px; margin: 0 auto; padding: 0 24px 40px; display: flex; justify-content: center; }
+
   @media (max-width: 760px) {
     .bar { padding: 18px 20px; }
     .logo { font-size: 24px; }
@@ -224,5 +237,6 @@ const jsonLd = [
     .md { padding: 18px 16px; font-size: 13px; line-height: 20px; }
     .pager-name { font-size: 22px; line-height: 26px; }
     .pager-count { display: none; }
+    .foot { padding: 0 20px 32px; }
   }
 </style>

@@ -9,6 +9,7 @@ export const SITE = {
   tagline: 'Give your AI agents a soul.',
   description:
     'Pick a personality for your personal AI agent. Spin through 16 MBTI souls or 9 Enneagram souls, meet one, and give it to your agent as a SOUL.md.',
+  creator: { name: 'Nick Sng', handle: '@wzsng', url: 'https://x.com/wzsng' },
 };
 
 export const DECKS = [
@@ -27,6 +28,9 @@ export const allSouls = () =>
       return { ...soul, type: typeLabel(soul), deck: deck.label, slug, page: `/souls/${slug}/`, md: `/souls/${slug}.md`, file: SOUL_FILES[slug] || '' };
     }),
   );
+
+// the creator as structured data, for a page's author
+export const creatorLd = () => ({ '@type': 'Person', name: SITE.creator.name, url: SITE.creator.url, sameAs: [SITE.creator.url] });
 
 export const absolute = (path) => new URL(path, SITE.url).href;
 

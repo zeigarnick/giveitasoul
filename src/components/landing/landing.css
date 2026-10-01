@@ -12,6 +12,7 @@
 
 /* top bar */
 .topbar { position: absolute; left: 0; top: 0; width: var(--W); box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; z-index: 200; }
+.topbar-brand { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .logo { position: relative; display: flex; align-items: baseline; font-family: 'Instrument Serif', Georgia, serif; letter-spacing: -0.03em; text-decoration: none; color: #141210; }
 .logo-it { position: relative; color: #8A8174; }
 .logo-it svg { position: absolute; left: -2px; top: 46%; }

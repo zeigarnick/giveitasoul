@@ -1,13 +1,13 @@
 ---
 import Landing from '../components/landing/Landing.jsx';
 import Seo from '../components/seo/Seo.astro';
-import { SITE, DECKS, absolute, allSouls } from '../lib/site.js';
+import { SITE, DECKS, absolute, allSouls, creatorLd } from '../lib/site.js';
 
 const { title, description } = SITE;
 const souls = allSouls();
 // structured data: the site, and the souls it offers as a list
 const jsonLd = [
-  { '@context': 'https://schema.org', '@type': 'WebSite', name: SITE.name, url: SITE.url, description },
+  { '@context': 'https://schema.org', '@type': 'WebSite', name: SITE.name, url: SITE.url, description, author: creatorLd() },
   {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
