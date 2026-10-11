@@ -27,7 +27,7 @@ export default function Landing() {
       <Hero engine={engine} st={f.st} L={L} />
       <DeckToggle engine={engine} st={f.st} deck={engine.deck} L={L} />
       <DeckFlip engine={engine} st={f.st} from={f.from} to={f.to} hint={f.plHint} L={L} />
-      <CardFan engine={engine} st={f.st} souls={engine.souls} />
+      <CardFan engine={engine} st={f.st} souls={engine.souls} L={L} />
       <DetailsSheet engine={engine} st={f.st} pill={f.pillAttr} soul={engine.souls[f.active]} L={L} />
       <BottomBar engine={engine} st={f.st} counter={counter} L={L} />
     </div>

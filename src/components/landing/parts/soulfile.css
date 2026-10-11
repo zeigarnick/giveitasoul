@@ -19,6 +19,9 @@ a.soulfile-back { text-decoration: none; }
 .flip-rotor { position: absolute; inset: 0; transform-style: preserve-3d; }
 .flip-front, .flip-back { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .flip-front { transform: rotateY(0deg); }
+.flip.is-flat { perspective: none; }
+.flip.is-flat .flip-rotor { transform-style: flat; }
+.flip.is-flat .flip-front { transform: none; }
 .flip-front-card { position: absolute; top: 0; border-radius: 24px; overflow: hidden; box-shadow: 0 18px 40px -22px rgba(20,18,16,0.35); }
 .is-stack .flip-front-card { border-radius: 16px; }
 .flip-back {

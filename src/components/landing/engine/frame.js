@@ -33,7 +33,7 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
   const p = e.p, cfg = e.feel, N = e.souls.length;
   const pos = p.pos;
   const active = ((Math.round(pos) % N) + N) % N;
-  const Lay = e.L, K = Lay.K, R = cfg.radius * K, PX = Lay.W / 2, PY = Lay.PYb + cfg.radius * K, STEP = cfg.spacing;
+  const Lay = e.L, K = Lay.K, Kc = Lay.Kc, R = cfg.radius * K, PX = Lay.W / 2, PY = Lay.PYb + cfg.radius * K, STEP = cfg.spacing;
   const lean = e.rm ? 0 : Math.max(-1, Math.min(1, p.sv / 5)) * cfg.lean;
   const cardPause = [], cardDist = [];
   let visible = 0;
@@ -73,16 +73,20 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
     // Crisp text at rest: once the wheel stops, the centre card drops everything that makes the browser draw it as a
     // stretched bitmap — the GPU layer hint, a flat 3D transform, a no-op filter, half-pixel positions — so its
     // words are drawn at their real size. While moving, it stays on the GPU for smooth motion.
-    const crisp = isActive && e.resting;
+    // (also while it only tilts under a resting pointer: one card re-drawing its words beats soft ones)
+    const crisp = isActive && (e.resting || (e.aim.g && !p.drag && Math.abs(p.v) < 0.01 && Math.abs(pos - Math.round(pos)) < 0.001));
+    // the card's box is CARD_W·Kc wide (see CardFan) and scales about its centre, so shift it to keep x as the
+    // left edge of an unscaled card
+    const bx = x + CARD_W * (1 - Kc) / 2, by = y + CARD_H * (1 - Kc) / 2;
     const ry = L(wry, 0), turn = isActive ? tilt(p) : '';
     const flat = Math.abs(ry) < 0.005 && !turn;
     const bright = 1 - cfg.dim * f * (1 - op01);
     st['card' + i] = {
-      transform: 'translate(' + (crisp ? Math.round(x) + 'px, ' + Math.round(y) : x.toFixed(1) + 'px, ' + y.toFixed(1)) + 'px) rotate(' + (L(wa, oa) + Math.sign(d) * slc * 10 + Math.max(-6, Math.min(6, cst.v * 2.2)) * Math.sign(d)).toFixed(2) + 'deg)' + (flat ? '' : ' perspective(1400px) rotateY(' + ry.toFixed(2) + 'deg)' + turn) + ' scale(' + (L(ws, os) * (1 - 0.08 * slc)).toFixed(4) + ')',
+      transform: 'translate(' + (crisp ? Math.round(bx) + 'px, ' + Math.round(by) : bx.toFixed(1) + 'px, ' + by.toFixed(1)) + 'px) rotate(' + (L(wa, oa) + Math.sign(d) * slc * 10 + Math.max(-6, Math.min(6, cst.v * 2.2)) * Math.sign(d)).toFixed(2) + 'deg)' + (flat ? '' : ' perspective(1400px) rotateY(' + ry.toFixed(2) + 'deg)' + turn) + ' scale(' + (L(ws, os) * (1 - 0.08 * slc) / Kc).toFixed(4) + ')',
       opacity: op.toFixed(3),
       zIndex: isActive && op01 > 0.01 ? 120 : 100 - rank[i],
       filter: bright > 0.9995 ? 'none' : 'brightness(' + bright.toFixed(3) + ')',
-      boxShadow: cardShadow(0, cfg),
+      boxShadow: cardShadow(0, cfg, Kc),
       willChange: crisp ? 'auto' : 'transform'
     };
     // the deeper shadow near the centre is a fixed shadow on its own layer faded in, so only opacity changes
@@ -108,8 +112,9 @@ function shadowLayers(near, cfg) {
 // the open window's two layers
 const OPEN_SHADOW = [{ y: 2, blur: 6, spread: 0, a: 0.08 }, { y: 50, blur: 110, spread: -24, a: 0.32 }];
 const shadowCss = (layers, digits) => layers.map((s) => '0 ' + s.y.toFixed(digits) + 'px ' + s.blur.toFixed(digits) + 'px ' + s.spread.toFixed(digits) + 'px rgba(20,18,16,' + s.a.toFixed(3) + ')').join(', ');
-function cardShadow(near, cfg) {
-  return shadowCss(shadowLayers(near, cfg), 0);
+// k: the card box's size against the 232×324 artwork (the shadow sits on the box, outside its zoom)
+function cardShadow(near, cfg, k = 1) {
+  return shadowCss(shadowLayers(near, cfg).map((s) => ({ ...s, y: s.y * k, blur: s.blur * k, spread: s.spread * k })), 0);
 }
 // A card's shadow is its far shadow (near 0, fixed on the card) plus this one faded in by `near`: each layer's
 // strength is chosen so the two together match the centre card's shadow (near 1). Changing a box-shadow repaints
@@ -233,7 +238,7 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
     boxShadow: sheetShadow(P0, clamp01(m), lift, cfg) + ', 0 0 0 0.5px rgba(20,18,16,' + (0.1 * clamp01(m)).toFixed(3) + ')',
     pointerEvents: pe
   };
-  st.art = { left: LS(0, artXT).toFixed(1) + 'px', top: LS(0, artYT).toFixed(1) + 'px', transform: 'scale(' + LS(P0.ws, ART).toFixed(4) + ')', boxShadow: '0 18px 40px -22px rgba(20,18,16,' + (0.35 * clamp01(m)).toFixed(3) + ')' };
+  st.art = { left: LS(0, artXT).toFixed(1) + 'px', top: LS(0, artYT).toFixed(1) + 'px', transform: 'scale(' + (LS(P0.ws, ART) / ART).toFixed(4) + ')', boxShadow: '0 18px 40px -22px rgba(20,18,16,' + (0.35 * clamp01(m)).toFixed(3) + ')' };
   st.artGlare = glare(p);
   st.det = { left: Math.round(textX) + 'px', top: Math.round(textY) + 'px' };
 

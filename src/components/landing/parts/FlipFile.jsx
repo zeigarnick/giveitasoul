@@ -71,7 +71,12 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
       visibility: on ? 'inherit' : 'hidden',
       left: lerp(f.x, t.x, g) + 'px', top: lerp(f.y, t.y, g) + 'px', width: w + 'px', height: h + 'px'
     });
-    rotor.current.style.transform = `rotateY(${(180 * p).toFixed(2)}deg)`;
+    // at rest (fully over, or home) the flip drops its 3D transforms: a face left in a 3D context, even one turned
+    // a whole 180° back to flat, is drawn as a resampled bitmap and its text goes soft
+    const flat = p === 0 || p === 1;
+    panel.current.classList.toggle('is-flat', flat);
+    rotor.current.style.transform = flat ? 'none' : `rotateY(${(180 * p).toFixed(2)}deg)`;
+    backFace.current.style.transform = p === 1 ? 'none' : '';
     front.current.style.left = (row ? 0 : (w - cardW) / 2) + 'px';
     // the back's content is laid out once at the final size and only revealed as the card grows, so its text never
     // re-wraps mid-flip; it fades in once the card is nearly full size
@@ -148,7 +153,7 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
       <div ref={rotor} className="flip-rotor">
         <div ref={frontFace} className="flip-front">
           <div ref={front} className="flip-front-card" style={{ width: cardW + 'px', height: cardH + 'px' }}>
-            <div style={{ width: '232px', height: '324px', transformOrigin: '0 0', transform: `scale(${ART})` }}><SoulCard s={soul} /></div>
+            <div style={{ width: '232px', height: '324px', zoom: ART }}><SoulCard s={soul} /></div>
           </div>
         </div>
         <div ref={backFace} className="flip-back" style={{ '--soul-bg': soul.bg, '--soul-fg': soul.fg }}>

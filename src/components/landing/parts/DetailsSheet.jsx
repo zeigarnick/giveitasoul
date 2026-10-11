@@ -22,9 +22,12 @@ export function DetailsSheet({ engine, st, pill, soul, L }) {
         <path ref={engine.bind('pill')} d={pill.d} stroke="#141210" strokeOpacity={pill['stroke-opacity']} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       <div ref={engine.bind('sheet')} role="dialog" aria-label={soul.name} className="sheet" style={st.sheet}>
-        <div ref={engine.bind('art')} className="sheet-art" style={st.art}>
-          <SoulCard s={soul} />
-          <span className="glare"><span ref={engine.bind('artGlare')} className="glare-spot" style={st.artGlare} /></span>
+        {/* laid out at its open size (zoom: ART), like the fan's cards, so its words are drawn 1:1 once open */}
+        <div ref={engine.bind('art')} className="sheet-art" style={{ width: `${232 * L.sheet.ART}px`, height: `${324 * L.sheet.ART}px`, borderRadius: `${20 * L.sheet.ART}px`, ...st.art }}>
+          <div className="sheet-art-z" style={{ zoom: L.sheet.ART }}>
+            <SoulCard s={soul} />
+            <span className="glare"><span ref={engine.bind('artGlare')} className="glare-spot" style={st.artGlare} /></span>
+          </div>
         </div>
         <div ref={engine.bind('det')} className="sheet-text" style={{ width: textW, ...st.det }} aria-hidden={flipped}>
           <span ref={engine.bind('d0')} className="sheet-meta soulfile-head" style={st.d0}>
