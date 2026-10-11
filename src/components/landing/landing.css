@@ -1,7 +1,13 @@
 /* Static styles for the landing stage. The stage is the window (--W and --H on .wheel); sizes that step between
    tiers are set inline from config.js TIERS, and anything that moves is set inline by the wheel engine. */
 
+/* the UI typeface for the counter and hints: a heavy, friendly sans with tight tracking (try others at /dev/fonts) */
 .wheel {
+  --ui-font: 'Onest', Geist, system-ui, sans-serif;
+  --ui-size: 14px;
+  --ui-track: -0.01em;
+  --ui-bold: 700;
+  --ui-semi: 500;
   position: relative;
   width: var(--W);
   height: var(--H);
@@ -32,7 +38,8 @@
 
 /* deck-switch label: the old deck name rolls up and out as the new one rolls in */
 .deckflip { position: absolute; left: 0; width: var(--W); display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 90; }
-.deckflip-hint, .deckflip-sub { font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 16px; letter-spacing: 0.08em; color: #6B6358; }
+.deckflip-hint { font-family: var(--ui-font); font-size: var(--ui-size); line-height: 16px; font-weight: var(--ui-semi); letter-spacing: var(--ui-track); color: #8A8174; }
+.deckflip-sub { font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 16px; letter-spacing: 0.08em; color: #6B6358; }
 .deckflip-stage { position: relative; margin-top: 14px; width: 360px; height: 104px; }
 .deckflip-card { position: absolute; left: 0; top: 0; width: 360px; height: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transform-origin: 50% 50%; }
 .deckflip-name { font-family: 'Instrument Serif', Georgia, serif; font-size: 48px; line-height: 52px; letter-spacing: -0.02em; }
@@ -68,6 +75,14 @@
 
 /* bottom bar */
 .bottombar { position: absolute; left: 0; width: var(--W); display: flex; justify-content: center; align-items: center; gap: 16px; z-index: 200; }
-.roundbtn { width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid #CFC6B6; background: #F4F0E8; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.counter { font-family: 'Geist Mono', monospace; font-size: 12px; color: #4A443C; text-align: center; }
+/* soft filled buttons, no outline */
+.roundbtn { width: 44px; height: 44px; border-radius: 50%; border: none; background: rgba(20,18,16,0.07); color: #141210; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.15s ease, transform 0.2s cubic-bezier(0.3, 1.4, 0.5, 1); }
+.roundbtn:hover { background: rgba(20,18,16,0.11); }
+.roundbtn:active { transform: scale(0.92); }
+.roundbtn:focus-visible { outline: 2px solid #141210; outline-offset: 3px; }
+/* the counter and its hint */
+.counter { font-family: var(--ui-font); font-size: var(--ui-size); line-height: 20px; letter-spacing: var(--ui-track); text-align: center; white-space: nowrap; }
+.counter-num { font-weight: var(--ui-bold); color: #141210; font-variant-numeric: tabular-nums; }
+.counter-hint { font-weight: var(--ui-semi); color: #8A8174; }
+@media (prefers-reduced-motion: reduce) { .roundbtn { transition: none; } }
 

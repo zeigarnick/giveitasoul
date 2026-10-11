@@ -293,6 +293,6 @@ function deckStyles(e, st) {
   st.hint = { opacity: p.gs ? 1 : 0 };
   st.front = { transform: 'translateY(' + (-18 * l).toFixed(2) + 'px) scale(' + (1 - 0.06 * lc).toFixed(4) + ')', opacity: (1 - lc).toFixed(3), filter: blurCss(6 * lc) };
   st.back = { transform: 'translateY(' + (18 * (1 - l)).toFixed(2) + 'px) scale(' + (0.94 + 0.06 * lc).toFixed(4) + ')', opacity: lc.toFixed(3), filter: blurCss(6 * (1 - lc)) };
-  const plHint = (p.sink || 0) > 0.14 || e.swapPending ? 'RELEASE TO SWITCH' : 'PULL DOWN TO SWITCH';
+  const plHint = (p.sink || 0) > 0.14 || e.swapPending ? 'Release to switch deck' : 'Pull down to switch deck';
   return { from, to, plHint };
 }
