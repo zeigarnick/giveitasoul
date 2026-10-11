@@ -9,8 +9,11 @@ import './soulfile.css';
 // show its SOUL.md (FlipFile).
 export function DetailsSheet({ engine, st, pill, soul, L }) {
   const { row, PAD, TEXTW } = L.sheet;
-  // phones: the window spans the whole screen (the artboard plus --ext each side), MARGIN in from each edge
-  const textW = row ? `${TEXTW}px` : `calc(${L.W - 2 * (L.sheet.MARGIN + PAD)}px + 2px * var(--ext, 0))`;
+  // phones: the window spans the whole screen, MARGIN in from each edge
+  const textW = row ? `${TEXTW}px` : `${L.W - 2 * (L.sheet.MARGIN + PAD)}px`;
+  // desktop: the head row shares the window's top edge with the close button (16px in, 32px wide), so it stops
+  // 8px short of it; on phones the text starts below the card, clear of the button
+  const headClear = row ? Math.max(0, 16 + 32 + 8 - PAD) : 0;
   const [flipped, setFlipped] = useState(false);
   useEffect(() => { if (!engine.open) setFlipped(false); }, [engine.open]);
   useEffect(() => { setFlipped(false); }, [soul.name]);
@@ -30,7 +33,7 @@ export function DetailsSheet({ engine, st, pill, soul, L }) {
           </div>
         </div>
         <div ref={engine.bind('det')} className="sheet-text" style={{ width: textW, ...st.det }} aria-hidden={flipped}>
-          <span ref={engine.bind('d0')} className="sheet-meta soulfile-head" style={st.d0}>
+          <span ref={engine.bind('d0')} className="sheet-meta soulfile-head" style={{ paddingRight: `${headClear}px`, ...st.d0 }}>
             <span>{soul.anchor}</span>
             <a href={page} className="soulfile-back">Soul page ↗</a>
           </span>
