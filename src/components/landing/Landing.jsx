@@ -8,8 +8,8 @@ import { DetailsSheet } from './parts/DetailsSheet.jsx';
 import { BottomBar } from './parts/BottomBar.jsx';
 import './landing.css';
 
-// The landing stage: a 1440×900 artboard, or 390×844 on phones (scaled to the window by the page), holding the
-// soul wheel.
+// The landing stage: the whole window, holding the soul wheel. Its type steps between fixed tiers and the fan
+// sizes itself to the space left (see layoutFor in config.js).
 // All motion lives in the wheel engine (see useWheel); these components only lay the page out.
 export default function Landing() {
   const { engine, frame: f } = useWheel();

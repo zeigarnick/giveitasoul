@@ -35,7 +35,6 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
   const active = ((Math.round(pos) % N) + N) % N;
   const Lay = e.L, K = Lay.K, R = cfg.radius * K, PX = Lay.W / 2, PY = Lay.PYb + cfg.radius * K, STEP = cfg.spacing;
   const lean = e.rm ? 0 : Math.max(-1, Math.min(1, p.sv / 5)) * cfg.lean;
-  const ext = e.ext || 0, exty = e.exty || 0;
   const cardPause = [], cardDist = [];
   let visible = 0;
   // Stacking follows each card's rank by distance from the centre, which only changes as two cards pass each other,
@@ -90,8 +89,8 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
     st['shade' + i] = { opacity: near.toFixed(3), boxShadow: nearShadow(cfg) };
     st['glare' + i] = isActive ? glare(p) : NO_GLARE;
     // off the window, invisible, or under the full-strength scrim
-    cardPause[i] = e.rm || op < 0.001 || op01 > 0.98 || x < -300 - ext || x > Lay.W + 20 + ext || y > Lay.H + 20 + exty;
-    if (op > 0.01 && !(x < -300 - ext || x > Lay.W + 20 + ext || y > Lay.H + 20 + exty)) visible++;
+    cardPause[i] = e.rm || op < 0.001 || op01 > 0.98 || x < -300 || x > Lay.W + 20 || y > Lay.H + 20;
+    if (op > 0.01 && !(x < -300 || x > Lay.W + 20 || y > Lay.H + 20)) visible++;
   }
   // how many cards can be seen; the deck switch waits for none
   e.fanVisible = visible;
@@ -174,9 +173,10 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
   const Lay = e.L, { row, PAD, GAP, ART } = Lay.sheet;
   const cardW = CARD_W * ART, cardH = CARD_H * ART;
   const textH = e.detH || 360;
-  const W1 = row ? PAD + cardW + GAP + Lay.sheet.TEXTW + PAD : Lay.W + 2 * ((e.ext || 0) - Lay.sheet.MARGIN);
+  const W1 = row ? PAD + cardW + GAP + Lay.sheet.TEXTW + PAD : Lay.W - 2 * Lay.sheet.MARGIN;
   const innerH = row ? Math.max(cardH, textH) : cardH + GAP + textH;
-  const H1 = innerH + PAD * 2, cx1 = Lay.W / 2, cy1 = Lay.sheet.cy;
+  // the window stays inside the screen; one taller than the screen centres on it
+  const H1 = innerH + PAD * 2, cx1 = Lay.W / 2, cy1 = H1 + 16 > Lay.H ? Lay.H / 2 : Math.max(H1 / 2 + 8, Math.min(Lay.H - H1 / 2 - 8, Lay.sheet.cy));
   // where the card art and the text land inside the open window
   const artX1 = row ? PAD : (W1 - cardW) / 2, artY1 = row ? PAD + (innerH - cardH) / 2 : PAD;
   const textX = row ? PAD + cardW + GAP : PAD, textY = row ? PAD + (innerH - textH) / 2 : PAD + cardH + GAP;

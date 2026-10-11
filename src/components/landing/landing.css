@@ -1,12 +1,11 @@
-/* Static styles for the landing stage. Sizes that differ between the desktop and phone artboards are set inline
-   from config.js LAYOUTS (--W and --H on .wheel); anything that moves is set inline by the wheel engine. */
+/* Static styles for the landing stage. The stage is the window (--W and --H on .wheel); sizes that step between
+   tiers are set inline from config.js TIERS, and anything that moves is set inline by the wheel engine. */
 
 .wheel {
   position: relative;
   width: var(--W);
   height: var(--H);
-  /* the artboard is letterboxed; let the fan run to the real window edges (--ext/--exty are set by the page) */
-  clip-path: inset(calc(var(--exty, 0) * -1px) calc(var(--ext, 0) * -1px));
+  overflow: hidden;
   background: #F4F0E8;
 }
 
@@ -48,7 +47,7 @@
 .glare-spot { position: absolute; left: 0; top: 0; width: 360px; height: 360px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.25) 35%, rgba(255,255,255,0) 70%); mix-blend-mode: overlay; opacity: 0; }
 
 /* open card: scrim, pill and details window */
-.scrim { position: absolute; left: calc(var(--ext, 0) * -1px); top: calc(var(--exty, 0) * -1px); width: calc(var(--W) + var(--ext, 0) * 2px); height: calc(var(--H) + var(--exty, 0) * 2px); z-index: 140; }
+.scrim { position: absolute; left: 0; top: 0; width: var(--W); height: var(--H); z-index: 140; }
 .pill { position: absolute; left: 0; top: 0; z-index: 160; pointer-events: none; }
 .sheet { position: absolute; left: 0; top: 0; z-index: 150; overflow: hidden; }
 .sheet-art { position: absolute; width: 232px; height: 324px; transform-origin: 0 0; border-radius: 20px; overflow: hidden; }

@@ -34,7 +34,7 @@ const jsonLd = [
   </head>
   <body>
     <main class="viewport">
-      <!-- The landing is designed on a 1440×900 stage (390×844 on phones) and scaled to fit the window. -->
+      <!-- The landing fills the window: its type steps between fixed tiers and only the card fan resizes. -->
       <div class="stage" id="stage">
         <Landing client:only="react" />
       </div>
@@ -59,22 +59,6 @@ const jsonLd = [
         <p>For AI agents: <a href="/llms.txt">llms.txt</a>, or <a href="/index.md">this page as markdown</a>.</p>
       </nav>
     </main>
-    <script is:inline>
-      (function () {
-        var stage = document.getElementById('stage');
-        function fit() {
-          // the artboard's size comes from CSS: 1440x900, or 390x844 on phones
-          var W = stage.offsetWidth, H = stage.offsetHeight;
-          var s = Math.min(window.innerWidth / W, window.innerHeight / H);
-          stage.style.setProperty('--s', String(s));
-          // how far the window extends past the artboard, in artboard pixels
-          stage.style.setProperty('--ext', String(Math.max(0, (window.innerWidth / s - W) / 2)));
-          stage.style.setProperty('--exty', String(Math.max(0, (window.innerHeight / s - H) / 2)));
-        }
-        fit();
-        window.addEventListener('resize', fit);
-      })();
-    </script>
   </body>
 </html>
 
@@ -98,17 +82,8 @@ const jsonLd = [
     overflow: hidden;
   }
   .stage {
-    --s: 1;
     position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 1440px;
-    height: 900px;
-    transform: translate(-50%, -50%) scale(var(--s));
-    transform-origin: 50% 50%;
-  }
-  @media (max-width: 700px) {
-    .stage { width: 390px; height: 844px; }
+    inset: 0;
   }
   /* no tap highlight box or long-press callout on phones: cards and buttons have their own pressed motion */
   .wheel { touch-action: none; cursor: grab; outline: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }

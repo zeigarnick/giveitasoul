@@ -1,5 +1,5 @@
 import { MBTI, ENNEAGRAM } from '../../../data/souls.js';
-import { FEEL, FACES, LAYOUTS, PHONE_QUERY, MOTIONS, MOTION } from '../config.js';
+import { FEEL, FACES, layoutFor, MOTIONS, MOTION } from '../config.js';
 import { springK, stepSpring, cubicBezier, ringOffset, clamp01 } from './spring.js';
 import { frame } from './frame.js';
 import { createWriter } from './writer.js';
@@ -19,9 +19,8 @@ export class WheelEngine {
   constructor() {
     this.mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.rm = this.mq.matches;
-    this.phoneMq = window.matchMedia(PHONE_QUERY);
-    this.layout = this.phoneMq.matches ? 'phone' : 'desk';
-    this.L = LAYOUTS[this.layout];
+    this.L = layoutFor(window.innerWidth, window.innerHeight, 0);
+    this.layout = this.L.tier;
     renderer().setScale(this.L.shaderScale);
     // open/close motion (see MOTIONS); the feel is FEEL with the variant's spring overrides
     this.motion = MOTIONS[MOTION];
@@ -29,7 +28,7 @@ export class WheelEngine {
     this.open = false;
     this.deck = 'mbti';
     this.key = '';
-    this.snapshot = { open: false, deck: 'mbti', key: '', layout: this.layout };
+    this.snapshot = { open: false, deck: 'mbti', key: '', L: this.L };
     this.listeners = new Set();
     this.p = { pos: 0, v: 0, target: 0, drag: null, moved: 0, open: 0, ov: 0, rest: 0, rv: 0, sv: 0, last: 0, tx: 0, txv: 0, ty: 0, tyv: 0, gl: 0, glv: 0 };
     // where the pointer aims the centre card's tilt and glare (-1..1 across the card; g is 1 while hovering it)
@@ -60,7 +59,7 @@ export class WheelEngine {
   subscribe = (fn) => { this.listeners.add(fn); return () => this.listeners.delete(fn); };
   getSnapshot = () => this.snapshot;
   emit() {
-    this.snapshot = { open: this.open, deck: this.deck, key: this.key, layout: this.layout };
+    this.snapshot = { open: this.open, deck: this.deck, key: this.key, L: this.L };
     this.listeners.forEach((fn) => fn());
   }
   // a stable ref callback per element name
@@ -84,27 +83,16 @@ export class WheelEngine {
 
   mount() {
     this.onRm = () => { this.rm = this.mq.matches; this.writer.resetPause(); this.dirty = true; this.wake(); };
-    this.onResize = () => { this.soulRect = null; this.rootRect = null; this.readExt(); this.measureDue = true; this.dirty = true; this.wake(); };
+    this.onResize = () => { this.soulRect = null; this.rootRect = null; this.relayout(); this.measureDue = true; this.dirty = true; this.wake(); };
     this.onFonts = () => { this.measureDue = true; this.wake(); };
-    // crossing the phone breakpoint swaps the artboard: forget the open card's pose and the hero word's measurements
-    this.onLayout = () => {
-      this.layout = this.phoneMq.matches ? 'phone' : 'desk';
-      this.L = LAYOUTS[this.layout];
-      renderer().setScale(this.L.shaderScale);
-      this.pose = null; this.faceM = []; this.detH = 0; this.soulRect = null; this.rootRect = null;
-      this.measureDue = true; this.dirty = true;
-      this.emit();
-      this.wake();
-    };
     // iPhone Safari only reports a finger's movement as pointer moves (so the wheel can be dragged) once something
     // listens for touches; this listener does nothing else
     this.onTouch = () => {};
     if (this.els.root) this.els.root.addEventListener('touchstart', this.onTouch, { passive: true });
     this.mq.addEventListener('change', this.onRm);
-    this.phoneMq.addEventListener('change', this.onLayout);
     window.addEventListener('resize', this.onResize);
     if (document.fonts) { document.fonts.addEventListener('loadingdone', this.onFonts); document.fonts.ready.then(this.onFonts); }
-    this.readExt();
+    this.relayout();
     this.measureDue = true; this.dirty = true;
     // a short beat after mount, so the first frames (fonts, shaders) don't stutter the rise
     if (this.intro) this.riseAt = performance.now() + INTRO_DELAY;
@@ -116,15 +104,24 @@ export class WheelEngine {
     clearTimeout(this.wt); clearTimeout(this.sleepT);
     if (this.els.root) this.els.root.removeEventListener('touchstart', this.onTouch);
     this.mq.removeEventListener('change', this.onRm);
-    this.phoneMq.removeEventListener('change', this.onLayout);
     window.removeEventListener('resize', this.onResize);
     if (document.fonts) document.fonts.removeEventListener('loadingdone', this.onFonts);
   }
-  // how far the window reaches past the artboard (set by the page), so cards out there still count as on screen
-  readExt() {
-    const cs = this.els.root ? getComputedStyle(this.els.root) : null;
-    this.ext = cs ? +cs.getPropertyValue('--ext') || 0 : 0;
-    this.exty = cs ? +cs.getPropertyValue('--exty') || 0 : 0;
+  // The layout follows the window (see layoutFor). Crossing into another tier changes the type, so the open card's
+  // pose and the hero word's measurements are forgotten; within a tier only the fan's size and place move.
+  relayout() {
+    const L = layoutFor(window.innerWidth, window.innerHeight, this.heroH);
+    const same = (k) => L[k] === this.L[k];
+    if (['tier', 'W', 'H', 'K', 'PYb', 'heroTop'].every(same)) return;
+    if (L.tier !== this.layout) {
+      this.layout = L.tier;
+      renderer().setScale(L.shaderScale);
+      this.pose = null; this.faceM = []; this.detH = 0; this.heroH = 0; this.soulRect = null; this.rootRect = null;
+      this.measureDue = true;
+    }
+    this.L = L;
+    this.dirty = true;
+    this.emit();
   }
 
   // ---- The loop -----------------------------------------------------------------------------------------------
@@ -324,6 +321,10 @@ export class WheelEngine {
     if (this.faceEls.length && (due || !this.faceM.length)) {
       const M = this.faceEls.map((el, i) => { const mk = this.markEls[i]; return el && mk ? { w: el.offsetWidth, below: el.offsetHeight - mk.offsetTop, base: mk.offsetTop } : null; });
       if (M.length === FACES.length && M.every(Boolean)) { const changed = JSON.stringify(M) !== JSON.stringify(this.faceM); this.faceM = M; if (changed) { this.dirty = true; this.soulRect = null; } }
+    }
+    if (this.els.hero && due) {
+      const hh = this.els.hero.offsetHeight;
+      if (hh && Math.abs(hh - (this.heroH || 0)) > 0.5) { this.heroH = hh; this.relayout(); }
     }
     if (this.els.det && due) { const hh = this.els.det.offsetHeight; if (hh && Math.abs(hh - (this.detH || 0)) > 0.5) { this.detH = hh; this.dirty = true; } }
   }
