@@ -272,15 +272,23 @@ function textStyles(e, open, st) {
   }
 }
 
+// a toggle label's colour and weight, from how much of the thumb is under it (k, 0..1)
+const TG_ON = [244, 240, 232, 1], TG_OFF = [20, 18, 16, 0.6];
+function toggleLabel(k) {
+  const c = TG_ON.map((on, j) => TG_OFF[j] + (on - TG_OFF[j]) * clamp01(k));
+  return { color: 'rgba(' + c.slice(0, 3).map(Math.round).join(',') + ',' + c[3].toFixed(3) + ')', fontWeight: k >= 0.5 ? 700 : 500 };
+}
+
 // The MBTI/Enneagram toggle and the deck name shown while switching decks.
 function deckStyles(e, st) {
   const p = e.p, deck = e.deck, open = e.open;
   const other = deck === 'mbti' ? 'ennea' : 'mbti';
   const W0 = e.L.tgW0, W1 = e.L.tgW1, t = p.tog || 0;
   st.toggle = { opacity: (1 - 0.6 * clamp01(p.rest || 0)).toFixed(3), pointerEvents: open ? 'none' : 'auto' };
-  st.thumb = { left: (3 + W0 * t).toFixed(1) + 'px', width: (W0 + (W1 - W0) * t).toFixed(1) + 'px' };
-  st.opt0 = { color: t < 0.5 ? '#141210' : '#6B6358' };
-  st.opt1 = { color: t >= 0.5 ? '#141210' : '#6B6358' };
+  st.thumb = { left: (4 + W0 * t).toFixed(1) + 'px', width: (W0 + (W1 - W0) * t).toFixed(1) + 'px' };
+  // the label under the thumb is light and bold; the colours crossfade as the thumb slides across
+  st.opt0 = toggleLabel(1 - t);
+  st.opt1 = toggleLabel(t);
   // The deck name shows in the space the fan leaves: it fades in as the fan sinks and out as the new deck rises
   // over it. Once a switch is committed the name rolls over on its own spring (p.lab): the old name lifts away and
   // blurs out while the new one rises into place, like the details text.

@@ -210,7 +210,7 @@ export class WheelEngine {
     // the frame the deck changes would aim the thumb back at the old deck for a moment and it would jerk back
     const curIdx = this.deck === 'mbti' ? 0 : 1;
     const togT = this.swapPending ? 1 - curIdx : curIdx;
-    const sinkS = p.sinkT ? springK(0.4, 0.95) : springK(0.62, 0.84), togS = springK(0.32, 0.86);
+    const sinkS = p.sinkT ? springK(0.4, 0.95) : springK(0.62, 0.84), togS = springK(0.56, 0.82);
     // the deck name under the fan rolls from the old name to the new one once a committed switch is halfway down, so
     // the new name lands as the old deck fades and the new one rises over it; it resets unseen once the switch is over
     if (p.lab == null || (!this.swapPending && !this.postSwap)) { p.lab = 0; p.labv = 0; }
