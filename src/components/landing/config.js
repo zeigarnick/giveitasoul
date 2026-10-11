@@ -9,7 +9,7 @@ export const FEEL = {
 
 // The hero word "soul" swaps typeface toward the pointer; index 0 is the resting face.
 export const FACES = [
-  { ff: "'Instrument Serif', Georgia, serif", st: 'italic', w: 400, fs: 1, ls: -0.03 },
+  { ff: 'var(--serif)', st: 'italic', w: 'var(--serif-w)', fs: 1, ls: -0.03 },
   { ff: "'Bodoni Moda', Didot, serif", st: 'italic', w: 700, fs: 0.92, ls: -0.03 },
   { ff: "'Bricolage Grotesque', sans-serif", st: 'normal', w: 800, fs: 0.86, ls: -0.05 },
   { ff: "Caveat, cursive", st: 'normal', w: 700, fs: 1.12, ls: -0.01 },

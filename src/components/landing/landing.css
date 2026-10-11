@@ -30,10 +30,10 @@
 
 /* hero */
 .hero { position: absolute; left: 0px; width: var(--W); box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; pointer-events: none; }
-.hero h1 { margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; letter-spacing: -0.03em; text-wrap: balance; }
-.hero p { margin: 0; color: #4A443C; text-wrap: balance; }
+.hero h1 { margin: 0; font-family: var(--serif); font-weight: var(--serif-w); font-variation-settings: var(--serif-axes); letter-spacing: -0.03em; text-wrap: balance; }
+.hero p { margin: 0; font-family: var(--ui-font); font-weight: 400; letter-spacing: var(--ui-track); color: #6B6358; text-wrap: balance; }
 .soulword { position: relative; display: inline-block; height: 0.72em; vertical-align: baseline; }
-.soulface { position: absolute; left: 0; line-height: 1; white-space: nowrap; }
+.soulface { position: absolute; left: 0; line-height: 1; white-space: nowrap; font-variation-settings: var(--serif-axes); }
 .soulmark { display: inline-block; width: 0; height: 0; }
 
 /* deck-switch label: the old deck name rolls up and out as the new one rolls in */
@@ -42,7 +42,7 @@
 .deckflip-sub { font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 16px; letter-spacing: 0.08em; color: #6B6358; }
 .deckflip-stage { position: relative; margin-top: 14px; width: 360px; height: 104px; }
 .deckflip-card { position: absolute; left: 0; top: 0; width: 360px; height: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transform-origin: 50% 50%; }
-.deckflip-name { font-family: 'Instrument Serif', Georgia, serif; font-size: 48px; line-height: 52px; letter-spacing: -0.02em; }
+.deckflip-name { font-family: var(--serif); font-weight: var(--serif-w); font-variation-settings: var(--serif-axes); font-size: 48px; line-height: 52px; letter-spacing: -0.02em; }
 
 /* the fan */
 .fancard { position: absolute; left: 0; top: 0; will-change: transform; }
@@ -62,8 +62,8 @@
 .sheet-art-z { position: relative; width: 232px; height: 324px; }
 .sheet-text { position: absolute; display: flex; flex-direction: column; }
 .sheet-meta { font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 16px; color: #6B6358; letter-spacing: 0.06em; }
-.sheet-name { margin-top: 8px; font-family: 'Instrument Serif', Georgia, serif; letter-spacing: -0.02em; }
-.sheet-says { margin-top: 12px; font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 20px; line-height: 28px; color: #3A342C; text-wrap: pretty; }
+.sheet-name { margin-top: 8px; font-family: var(--serif); font-weight: var(--serif-w); font-variation-settings: var(--serif-axes); letter-spacing: -0.02em; }
+.sheet-says { margin-top: 12px; font-family: var(--serif); font-weight: var(--serif-w); font-variation-settings: var(--serif-axes); font-style: italic; font-size: 20px; line-height: 28px; color: #3A342C; text-wrap: pretty; }
 .sheet-moments { margin-top: 24px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #E4DCCB; padding-top: 16px; }
 .sheet-moments-title { font-size: 12px; line-height: 16px; color: #6B6358; }
 .sheet-moment { font-size: 15px; line-height: 22px; }

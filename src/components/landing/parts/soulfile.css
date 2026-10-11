@@ -34,7 +34,7 @@ a.soulfile-back { text-decoration: none; }
 
 .flip-strip { position: absolute; left: 0; top: 0; right: 0; height: 64px; padding: 0 20px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--soul-bg); color: var(--soul-fg); }
 .flip-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.flip-name { font-family: 'Instrument Serif', Georgia, serif; font-size: 24px; line-height: 26px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.flip-name { font-family: var(--serif); font-weight: var(--serif-w); font-variation-settings: var(--serif-axes); font-size: 24px; line-height: 26px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .flip-sub { font-family: 'Geist Mono', monospace; font-size: 10px; line-height: 14px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; }
 .flip-page { color: inherit; font-size: 13px; text-decoration: none; opacity: 0.85; white-space: nowrap; }
 .flip-page:hover { color: inherit; opacity: 1; }
@@ -44,7 +44,7 @@ a.soulfile-back { text-decoration: none; }
   overflow: auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: thin; user-select: text; -webkit-user-select: text;
 }
 .flip-body .md-h { margin: 18px 0 6px; font-family: 'Geist Mono', monospace; font-size: 11px; line-height: 16px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: #6B6358; }
-.flip-body .md-q { margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 17px; line-height: 23px; color: #3A342C; }
+.flip-body .md-q { margin: 0; font-family: var(--serif); font-weight: var(--serif-w); font-variation-settings: var(--serif-axes); font-style: italic; font-size: 17px; line-height: 23px; color: #3A342C; }
 .flip-body .md-p { margin: 10px 0 0; font-size: 14px; line-height: 22px; color: #2B2621; }
 .flip-body .md-li { position: relative; margin: 5px 0 0; padding-left: 14px; font-size: 14px; line-height: 21px; color: #2B2621; }
 .flip-body .md-li::before { content: '–'; position: absolute; left: 0; color: #A39A8C; }

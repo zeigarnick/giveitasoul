@@ -11,12 +11,11 @@ const font = (file) => readFileSync(require.resolve(file));
 let fonts;
 const loadFonts = () =>
   (fonts ||= [
-    { name: 'Instrument Serif', data: font('@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff'), weight: 400, style: 'normal' },
-    { name: 'Instrument Serif', data: font('@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff'), weight: 400, style: 'italic' },
+    { name: 'Hedvig Letters Serif', data: font('@fontsource/hedvig-letters-serif/files/hedvig-letters-serif-latin-400-normal.woff'), weight: 400, style: 'normal' },
     { name: 'Geist', data: font('@fontsource/geist-sans/files/geist-sans-latin-400-normal.woff'), weight: 400, style: 'normal' },
     { name: 'Geist', data: font('@fontsource/geist-sans/files/geist-sans-latin-500-normal.woff'), weight: 500, style: 'normal' },
-    { name: 'Gabarito', data: font('@fontsource/gabarito/files/gabarito-latin-700-normal.woff'), weight: 700, style: 'normal' },
     { name: 'Geist Mono', data: font('@fontsource/geist-mono/files/geist-mono-latin-400-normal.woff'), weight: 400, style: 'normal' },
+    { name: 'Gabarito', data: font('@fontsource/gabarito/files/gabarito-latin-700-normal.woff'), weight: 700, style: 'normal' },
   ]);
 
 export const OG_W = 1200, OG_H = 630;
@@ -62,7 +61,7 @@ function cardFace(s, w, hgt, k, rotate, seed) {
     h('div', { position: 'absolute', left: 0, top: 44 * k }, waves(Math.round(w), Math.round(150 * k), s.ac, seed)),
     h('div', { position: 'absolute', left: 18 * k, top: 14 * k, fontFamily: 'Geist Mono', fontSize: 11 * k }, s.anchor),
     h('div', { position: 'absolute', left: 18 * k, right: 18 * k, bottom: 18 * k, flexDirection: 'column', gap: 4 * k },
-      h('div', { fontFamily: 'Instrument Serif', fontSize: 30 * k, lineHeight: 1 }, s.name),
+      h('div', { fontFamily: 'Hedvig Letters Serif', fontWeight: 400, fontSize: 25 * k, lineHeight: 1.04, letterSpacing: -0.025 * 25 * k }, s.name),
       h('div', { fontFamily: 'Geist', fontSize: 13 * k, lineHeight: 1.35 }, s.line)),
   );
 }
@@ -97,7 +96,7 @@ export function soulImage(s) {
       logo(),
       h('div', { flexDirection: 'column' },
         h('div', { fontFamily: 'Geist Mono', fontSize: 22, color: MUTED, letterSpacing: 1 }, `${s.deck.toUpperCase()} · ${s.type.toUpperCase()}`),
-        h('div', { fontFamily: 'Instrument Serif', fontSize: 104, lineHeight: 1, color: INK, marginTop: 14, letterSpacing: -3 }, s.name),
+        h('div', { fontFamily: 'Hedvig Letters Serif', fontWeight: 400, fontSize: 88, lineHeight: 1, color: INK, marginTop: 14, letterSpacing: -2.5 }, s.name),
         h('div', { fontFamily: 'Geist', fontSize: 34, lineHeight: 1.3, color: '#4A443C', marginTop: 22 }, s.line)),
       h('div', { fontFamily: 'Geist Mono', fontSize: 20, color: MUTED }, 'A SOUL.md for your AI agent')),
     card(s, 330, 3, s.name.length));
@@ -108,9 +107,9 @@ export function homeImage(souls) {
   return h('div', { width: OG_W, height: OG_H, background: PAPER, padding: '64px 80px', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' },
     logo(),
     h('div', { flexDirection: 'column', width: 620 },
-      h('div', { fontFamily: 'Instrument Serif', fontSize: 92, lineHeight: 1, color: INK, letterSpacing: -3 }, 'Give your AI agents'),
-      h('div', { fontFamily: 'Instrument Serif', fontSize: 92, lineHeight: 1, color: INK, letterSpacing: -3 },
-        'a\u00a0', h('span', { fontStyle: 'italic' }, 'soul.')),
+      h('div', { fontFamily: 'Hedvig Letters Serif', fontWeight: 400, fontSize: 80, lineHeight: 1.02, color: INK, letterSpacing: -2.4 }, 'Give your AI agents'),
+      h('div', { fontFamily: 'Hedvig Letters Serif', fontWeight: 400, fontSize: 80, lineHeight: 1.02, color: INK, letterSpacing: -2.4 },
+        'a\u00a0soul.'),
       h('div', { fontFamily: 'Geist', fontSize: 28, lineHeight: 1.35, color: '#4A443C', marginTop: 22, width: 520 }, '16 MBTI and 9 Enneagram personalities, each a SOUL.md for your agent.')),
     h('div', { fontFamily: 'Geist Mono', fontSize: 20, color: MUTED }, 'giveitasoul.com'),
     ...fan.map((s, i) => h('div', { position: 'absolute', left: 716 + i * 86, top: 160 + Math.abs(i - 2) * 32 }, card(s, 220, (i - 2) * 7, i * 1.3))));

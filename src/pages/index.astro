@@ -1,6 +1,7 @@
 ---
 import Landing from '../components/landing/Landing.jsx';
 import Seo from '../components/seo/Seo.astro';
+import '../styles/type.css';
 import { SITE, DECKS, absolute, allSouls, creatorLd } from '../lib/site.js';
 
 const { title, description } = SITE;
@@ -92,5 +93,5 @@ const jsonLd = [
   .slotbtn:focus-visible { outline: 2px solid #141210; outline-offset: 4px; }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   .fallback { max-width: 560px; margin: 20vh auto 0; padding: 0 24px; text-align: center; }
-  .fallback h1 { font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 56px; line-height: 1; margin: 0 0 16px; }
+  .fallback h1 { font-family: var(--serif); font-weight: var(--serif-w); font-variation-settings: var(--serif-axes); font-size: 56px; line-height: 1; margin: 0 0 16px; }
 </style>

@@ -18,7 +18,7 @@ function SoulCard({ s = FALLBACK }) {
         <span>{s.anchor}</span>
       </span>
       <span style={{ position: 'absolute', left: '18px', right: '18px', bottom: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <span style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: '30px', lineHeight: '1' }}>{s.name}</span>
+        <span style={{ fontFamily: 'var(--serif)', fontWeight: 'var(--serif-w)', fontVariationSettings: 'var(--serif-axes)', fontSize: '25px', lineHeight: '1.04', letterSpacing: '-0.025em' }}>{s.name}</span>
         <span style={{ fontSize: '13px', lineHeight: '1.35' }}>{s.line}</span>
       </span>
     </div>

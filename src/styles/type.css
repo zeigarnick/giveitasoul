@@ -1,0 +1,10 @@
+/* The serif for headlines, soul names and quotes: Hedvig Letters Serif, a friendly, slightly quirky serif to sit
+   beside the rounded Gabarito logo. Use all three: font-family: var(--serif); font-weight: var(--serif-w);
+   font-variation-settings: var(--serif-axes). */
+:root {
+  --serif: 'Hedvig Letters Serif', Georgia, serif;
+  --serif-w: 400;
+  --serif-axes: normal;
+}
+/* Hedvig has no italic: keep italic text upright rather than let the browser slant it */
+html { font-synthesis-style: none; }
