@@ -1,0 +1,187 @@
+---
+// Dev only, at /dev/toggle (registered for the dev server in astro.config.mjs): a playground for the MBTI / Enneagram toggle. A copy of the toggle
+// is restyled live from the sliders; its thumb runs on the same kind of spring as the wheel engine's.
+import Nav from './Nav.astro';
+import './pg.css';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Toggle · giveitasoul dev</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" />
+  </head>
+  <body class="pg">
+    <aside class="pg-side">
+      <Nav on="toggle" />
+      <div class="pg-controls" id="controls"></div>
+      <div class="pg-out"><pre id="out"></pre><button id="copy">Copy</button></div>
+    </aside>
+    <main class="pg-stage">
+      <div class="pg-tools">
+        <button id="flip">Switch</button>
+        <label><input id="loop" type="checkbox" /> Loop</label>
+      </div>
+      <div class="big"><div class="tg" data-tg></div></div>
+      <span class="pg-cap">2× zoom</span>
+      <div class="tg" data-tg></div>
+      <span class="pg-cap">actual size</span>
+    </main>
+
+    <style id="live" is:inline></style>
+    <style is:global>
+      .big { zoom: 2; }
+      .tg { position: relative; display: inline-flex; box-sizing: border-box; }
+      .tg-thumb { position: absolute; left: 0; box-sizing: border-box; pointer-events: none; }
+      .tg-opt { all: unset; position: relative; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; white-space: nowrap; }
+      .tg-opt:focus-visible { outline: 2px solid #141210; outline-offset: 2px; border-radius: 99px; }
+      .tg-count { display: inline-flex; align-items: center; justify-content: center; }
+    </style>
+
+    <script>
+      import { panel, springStepper, copyButton } from './panel.js';
+
+      const schema = [
+        { type: 'heading', label: 'Track' },
+        { key: 'h', label: 'Height', type: 'range', min: 24, max: 52, value: 36, unit: 'px' },
+        { key: 'pad', label: 'Inset', type: 'range', min: 0, max: 8, step: 0.5, value: 3, unit: 'px' },
+        { key: 'r', label: 'Corner radius', type: 'range', min: 0, max: 26, value: 26, unit: 'px' },
+        { key: 'track', label: 'Tint', type: 'range', min: 0, max: 0.2, step: 0.005, value: 0.07 },
+        { key: 'border', label: 'Outline', type: 'range', min: 0, max: 0.4, step: 0.01, value: 0 },
+        { type: 'heading', label: 'Thumb' },
+        { key: 'style', label: 'Style', type: 'select', options: ['pill', 'ring', 'underline'], value: 'pill' },
+        { key: 'thumb', label: 'Colour', type: 'color', value: '#ffffff' },
+        { key: 'shadow', label: 'Shadow', type: 'range', min: 0, max: 1, step: 0.05, value: 1 },
+        { key: 'stretch', label: 'Stretch on move', type: 'range', min: 0, max: 1, step: 0.05, value: 0 },
+        { type: 'heading', label: 'Labels' },
+        { key: 'font', label: 'Font', type: 'select', options: ['Onest', 'Geist'], value: 'Onest' },
+        { key: 'fs', label: 'Size', type: 'range', min: 11, max: 17, step: 0.5, value: 14, unit: 'px' },
+        { key: 'wOn', label: 'Weight on', type: 'range', min: 400, max: 800, step: 100, value: 500 },
+        { key: 'wOff', label: 'Weight off', type: 'range', min: 400, max: 800, step: 100, value: 500 },
+        { key: 'off', label: 'Off opacity', type: 'range', min: 0.3, max: 1, step: 0.05, value: 0.65 },
+        { key: 'ls', label: 'Tracking', type: 'range', min: -0.04, max: 0.04, step: 0.005, value: -0.01, unit: 'em' },
+        { key: 'optPad', label: 'Side padding', type: 'range', min: 8, max: 24, value: 16, unit: 'px' },
+        { key: 'switchAt', label: 'Label change', type: 'select', options: ['crossfade', 'midpoint'], value: 'midpoint' },
+        { type: 'heading', label: 'Count' },
+        { key: 'count', label: 'Style', type: 'select', options: ['inline', 'badge', 'mono', 'hidden'], value: 'mono' },
+        { key: 'countOp', label: 'Opacity', type: 'range', min: 0.3, max: 1, step: 0.05, value: 0.6 },
+        { key: 'countGap', label: 'Gap', type: 'range', min: 2, max: 12, value: 7, unit: 'px' },
+        { type: 'heading', label: 'Motion (spring)' },
+        { key: 'resp', label: 'Response', type: 'range', min: 0.15, max: 0.8, step: 0.01, value: 0.32, unit: 's' },
+        { key: 'damp', label: 'Damping', type: 'range', min: 0.4, max: 1, step: 0.01, value: 0.86 }
+      ];
+      // "Current" is the live site; the others are starting points
+      const presets = {
+        Current: {},
+        'Ink thumb': { thumb: '#141210', shadow: 0.4, count: 'inline', countOp: 0.55, wOn: 600, track: 0.06 },
+        'Badge counts': { count: 'badge', countOp: 0.8, wOn: 600, h: 38, pad: 4, optPad: 14 },
+        Ring: { style: 'ring', track: 0, border: 0.18, shadow: 0, count: 'inline', wOn: 600 },
+        Underline: { style: 'underline', track: 0, r: 0, pad: 0, shadow: 0, thumb: '#141210', count: 'hidden', wOn: 600, wOff: 500, off: 0.5, optPad: 12 },
+        Bouncy: { resp: 0.42, damp: 0.62, stretch: 0.6 }
+      };
+
+      const tgs = [...document.querySelectorAll('[data-tg]')];
+      for (const t of tgs) {
+        t.innerHTML = '<span class="tg-thumb"></span>' +
+          '<button type="button" class="tg-opt" data-i="0">MBTI <span class="tg-count">16</span></button>' +
+          '<button type="button" class="tg-opt" data-i="1">Enneagram <span class="tg-count">9</span></button>';
+        t.addEventListener('click', (e) => { const b = e.target.closest('.tg-opt'); if (b) go(+b.dataset.i); });
+      }
+      const live = document.getElementById('live');
+      let S = null, step = null;
+      const spring = { x: 0, v: 0 };
+      let target = 0, raf = 0, last = 0;
+
+      const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+      const dark = (h) => { const [r, g, b] = hex(h); return 0.2126 * r + 0.7152 * g + 0.0722 * b < 128; };
+      const shadowFor = (k) => k ? `0 1px 2px rgba(20,18,16,${(0.14 * k).toFixed(3)}), 0 3px 10px -2px rgba(20,18,16,${(0.12 * k).toFixed(3)}), 0 0 0 0.5px rgba(20,18,16,${(0.06 * k).toFixed(3)})` : 'none';
+
+      function css() {
+        const inner = S.h - 2 * S.pad, r = Math.min(S.r, S.h / 2), ri = Math.max(0, Math.min(r - S.pad, inner / 2));
+        const onText = S.style === 'pill' && dark(S.thumb) ? '#F4F0E8' : '#141210';
+        const thumb =
+          S.style === 'ring' ? `background: transparent; border: 1.5px solid ${S.thumb === '#ffffff' ? '#141210' : S.thumb}; border-radius: ${ri}px; top: ${S.pad}px; height: ${inner}px; box-shadow: none;`
+          : S.style === 'underline' ? `background: ${S.thumb}; border-radius: 2px; top: ${S.h - 3}px; height: 2.5px; box-shadow: none;`
+          : `background: ${S.thumb}; border-radius: ${ri}px; top: ${S.pad}px; height: ${inner}px; box-shadow: ${shadowFor(S.shadow)};`;
+        const count =
+          S.count === 'hidden' ? 'display: none;'
+          : S.count === 'badge' ? `font-size: ${Math.max(10, S.fs - 3.5)}px; font-weight: 600; min-width: ${S.fs + 2}px; height: ${S.fs + 2}px; padding: 0 5px; box-sizing: border-box; border-radius: 99px; background: rgba(20,18,16,${(0.12 * S.countOp).toFixed(3)}); letter-spacing: 0; font-variant-numeric: tabular-nums;`
+          : S.count === 'mono' ? `font-family: 'Geist Mono', monospace; font-size: 11px; font-weight: 400; opacity: ${S.countOp}; letter-spacing: 0;`
+          : `font-weight: ${Math.min(S.wOff, 500)}; opacity: ${S.countOp};`;
+        return {
+          onText,
+          rules: `.tg { height: ${S.h}px; padding: ${S.pad}px; border-radius: ${r}px; background: rgba(20,18,16,${S.track}); box-shadow: ${S.border ? `inset 0 0 0 1px rgba(20,18,16,${S.border})` : 'none'}; }
+.tg-thumb { ${thumb} }
+.tg-opt { height: ${inner}px; padding: 0 ${S.optPad}px; gap: ${S.countGap}px; font-family: '${S.font}', Geist, system-ui, sans-serif; font-size: ${S.fs}px; letter-spacing: ${S.ls}em; color: #141210; }
+.tg-count { ${count} }`
+        };
+      }
+
+      // place the thumbs and colour the labels for the spring's current position
+      function paint() {
+        const { onText } = cssCache;
+        for (const t of tgs) {
+          const opts = t.querySelectorAll('.tg-opt'), th = t.querySelector('.tg-thumb');
+          const a = opts[0], b = opts[1], x = spring.x;
+          const left = a.offsetLeft + (b.offsetLeft - a.offsetLeft) * x;
+          const w = a.offsetWidth + (b.offsetWidth - a.offsetWidth) * x;
+          const extra = S.stretch * Math.min(1, Math.abs(spring.v) / 5) * 36;
+          th.style.left = (left - extra / 2) + 'px';
+          th.style.width = (w + extra) + 'px';
+          opts.forEach((o, i) => {
+            const on = S.switchAt === 'midpoint' ? (i === 0 ? x < 0.5 : x >= 0.5) : null;
+            const k = on === null ? (i === 0 ? 1 - x : x) : on ? 1 : 0;
+            const pct = Math.round(k * 100);
+            o.style.color = `color-mix(in srgb, ${onText} ${pct}%, rgba(20,18,16,${S.off}))`;
+            o.style.fontWeight = k > 0.5 ? S.wOn : S.wOff;
+          });
+        }
+      }
+      function loop(now) {
+        const dt = Math.min(0.05, last ? (now - last) / 1000 : 1 / 60); last = now;
+        const moving = step(spring, target, dt);
+        paint();
+        raf = moving ? requestAnimationFrame(loop) : 0;
+        if (!moving) last = 0;
+      }
+      function go(i) { target = i; if (!raf) raf = requestAnimationFrame(loop); }
+      document.getElementById('flip').addEventListener('click', () => go(1 - target));
+      let loopT = 0;
+      document.getElementById('loop').addEventListener('change', (e) => {
+        clearInterval(loopT);
+        if (e.target.checked) { go(1 - target); loopT = setInterval(() => go(1 - target), 1400); }
+      });
+
+      let cssCache = {};
+      function output() {
+        const inner = S.h - 2 * S.pad;
+        const widths = [...tgs[1].querySelectorAll('.tg-opt')].map((o) => Math.round(o.offsetWidth));
+        return `/* landing.css — the toggle (same values as this playground) */
+${cssCache.rules.replace(/\.tg-thumb/g, '.toggle-thumb').replace(/\.tg-opt/g, '.toggle-opt').replace(/\.tg-count/g, '.toggle-count').replace(/\.tg\b/g, '.toggle')}
+
+/* active label: ${cssCache.onText}, inactive: rgba(20,18,16,${S.off}); weights ${S.wOn} / ${S.wOff}; label change: ${S.switchAt} */
+
+/* config.js — desktop tier */
+tgW0: ${widths[0]}, tgW1: ${widths[1]}, tgFs: ${S.fs}, (thumb height ${inner}px)
+
+/* WheelEngine.js — the thumb's spring */
+togS = springK(${S.resp}, ${S.damp})${S.stretch ? `\n/* stretch ${S.stretch}: the thumb widens with speed (needs adding to deckStyles in frame.js) */` : ''}`;
+      }
+
+      panel(document.getElementById('controls'), {
+        tool: 'toggle', schema, presets,
+        onChange: (state) => {
+          S = state;
+          step = springStepper(S.resp, S.damp);
+          cssCache = css();
+          live.textContent = cssCache.rules;
+          paint();
+          document.getElementById('out').textContent = output();
+        }
+      });
+      copyButton(document.getElementById('copy'), () => document.getElementById('out').textContent);
+      document.fonts && document.fonts.ready.then(() => { if (S) { paint(); document.getElementById('out').textContent = output(); } });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,27 @@
+/* Dev only: the shared layout for the playgrounds in src/dev (panel on the left, stage on the right). */
+.pg { margin: 0; display: flex; height: 100vh; font: 13px/1.4 system-ui, sans-serif; background: #E7E2D8; color: #141210; }
+.pg-side { width: 340px; flex: none; display: flex; flex-direction: column; background: #FBF8F1; border-right: 1px solid #D8D0C0; }
+.pg-nav { display: flex; gap: 4px; padding: 10px 12px; border-bottom: 1px solid #E4DCCB; }
+.pg-nav a { padding: 4px 8px; border-radius: 6px; color: #6B6358; text-decoration: none; }
+.pg-nav a:hover { background: #EFE9DD; color: #141210; }
+.pg-nav a.on { background: #141210; color: #F4F0E8; }
+.pg-controls { flex: 1; overflow: auto; padding: 8px 14px 16px; }
+.pg-controls h3 { margin: 16px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8A8174; }
+.pg-presets { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 0 4px; }
+.pg-presets button { font: inherit; padding: 4px 9px; border-radius: 99px; border: 1px solid #CFC6B6; background: #FFF; cursor: pointer; }
+.pg-presets button:hover { background: #F4F0E8; }
+.pg-presets .pg-reset { margin-left: auto; color: #8A8174; }
+.pg-row { display: grid; grid-template-columns: 112px 1fr 56px; align-items: center; gap: 8px; padding: 3px 0; color: #4A443C; }
+.pg-row.is-check { display: flex; gap: 8px; }
+.pg-row input[type='range'] { width: 100%; accent-color: #141210; }
+.pg-row select, .pg-row input[type='color'] { grid-column: span 2; font: inherit; }
+.pg-row select { padding: 2px 4px; border-radius: 6px; border: 1px solid #CFC6B6; background: #FFF; }
+.pg-row input[type='color'] { width: 48px; height: 24px; padding: 0; border: 1px solid #CFC6B6; border-radius: 6px; background: none; }
+.pg-row output { font: 11px ui-monospace, monospace; color: #8A8174; text-align: right; }
+.pg-out { border-top: 1px solid #E4DCCB; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; max-height: 34vh; }
+.pg-out pre { margin: 0; overflow: auto; font: 11px/1.5 ui-monospace, monospace; color: #4A443C; white-space: pre-wrap; user-select: all; }
+.pg-out button { align-self: flex-start; font: inherit; padding: 6px 12px; border-radius: 8px; border: 1px solid #CFC6B6; background: #FFF; cursor: pointer; }
+.pg-stage { flex: 1; min-width: 0; overflow: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 32px; background: #F4F0E8; }
+.pg-cap { font: 11px ui-monospace, monospace; color: #8A8174; }
+.pg-tools { display: flex; gap: 8px; }
+.pg-tools button, .pg-tools label { font: inherit; padding: 6px 12px; border-radius: 8px; border: 1px solid #CFC6B6; background: #FFF; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }

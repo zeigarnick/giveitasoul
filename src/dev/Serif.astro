@@ -1,0 +1,187 @@
+---
+// Dev only, at /dev/serif (registered for the dev server in astro.config.mjs): try serifs for the headline, soul names and quotes on the live page.
+// Every candidate is open source (OFL) on Google Fonts. Picking one overrides the --serif variables from
+// styles/type.css inside the previews; "Copy" gives the values to keep.
+import Nav from './Nav.astro';
+
+// [family, weights it ships, has a true italic, note]
+const SERIFS = [
+  ['Hedvig Letters Serif', [400], false, 'quirky, friendly, 2024'],
+  ['Caprasimo', [400], false, 'soft, chunky, Cooper-style'],
+  ['Gloock', [400], false, 'chunky, high contrast'],
+  ['Kalnia', [400, 500, 600, 700], false, 'sharp, quirky, high contrast'],
+  ['Besley', [400, 500, 600, 700, 800], true, 'warm Clarendon'],
+  ['Corben', [400, 700], false, 'rounded, soft, retro'],
+  ['Brygada 1918', [400, 500, 600, 700], true, 'warm book serif'],
+  ['Castoro', [400], true, 'warm, calligraphic'],
+  ['Young Serif', [400], false, 'heavy old-style'],
+  ['Piazzolla', [300, 400, 500, 600, 700, 800], true, 'sturdy, warm, quirky'],
+  ['Trirong', [300, 400, 500, 600, 700, 800], true, 'soft, round, friendly'],
+  ['Petrona', [300, 400, 500, 600, 700, 800], true, 'warm, chunky when heavy'],
+  ['Bona Nova', [400, 700], true, 'classic, a little playful'],
+  ['Ibarra Real Nova', [400, 500, 600, 700], true, 'elegant old-style'],
+  ['Instrument Serif', [400], true, 'the original'],
+  ['Fraunces', [400, 500, 600], true, 'current (common)'],
+];
+const href = ([f, w, it]) => `https://fonts.googleapis.com/css2?family=${f.replace(/ /g, '+')}:${it ? 'ital,' : ''}wght@${it ? w.map((x) => '0,' + x).concat(w.map((x) => '1,' + x)).join(';') : w.join(';')}&display=swap`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Serif · giveitasoul dev</title>
+    {SERIFS.map((s) => <link rel="stylesheet" href={href(s)} />)}
+  </head>
+  <body>
+    <aside class="side">
+      <Nav on="serif" />
+      <header>
+        <strong>Serif</strong>
+        <span class="hint">headline, soul names, quotes · ↑ ↓</span>
+      </header>
+      <div class="controls">
+        <label>Weight <select id="weight"></select></label>
+        <button id="open" type="button">Open a card</button>
+      </div>
+      <ul id="list">
+        {SERIFS.map(([f, w, it, note], i) => (
+          <li data-font={f} tabindex="0" class={i === 0 ? 'on' : ''}>
+            <div class="name"><span>{f}</span><em>{note}{it ? '' : ' · no italic'}</em></div>
+            <div class="spec" style={`font-family: '${f}'`}>Give your AI agents a <i>soul.</i></div>
+            <div class="fit"><span class="card-name" style={`font-family: '${f}'`}>The Cartographer</span><span class="ok"></span></div>
+          </li>
+        ))}
+      </ul>
+      <footer>
+        <pre id="css"></pre>
+        <button id="copy">Copy</button>
+      </footer>
+    </aside>
+    <main class="previews">
+      <figure><div class="view" data-w="1440" data-h="900"><iframe src="/" width="1440" height="900"></iframe></div><figcaption>Desktop 1440×900</figcaption></figure>
+      <figure><div class="view" data-w="390" data-h="844"><iframe src="/" width="390" height="844"></iframe></div><figcaption>Phone 390×844</figcaption></figure>
+    </main>
+
+    <script is:inline define:vars={{ SERIFS }}>
+      const $ = (id) => document.getElementById(id);
+      const items = [...document.querySelectorAll('#list li')];
+      const frames = [...document.querySelectorAll('iframe')];
+      const find = (f) => SERIFS.find((x) => x[0] === f);
+      const state = { font: SERIFS[0][0], weight: 400 };
+      const gfFamily = ([f, w, it]) => f.replace(/ /g, '+') + ':' + (it ? 'ital,' : '') + 'wght@' + (it ? w.map((x) => '0,' + x).concat(w.map((x) => '1,' + x)).join(';') : w.join(';'));
+
+      function fillWeights() {
+        const ws = find(state.font)[1];
+        if (!ws.includes(state.weight)) state.weight = ws.reduce((a, b) => (Math.abs(b - 500) < Math.abs(a - 500) ? b : a));
+        $('weight').innerHTML = ws.map((w) => '<option' + (w === state.weight ? ' selected' : '') + '>' + w + '</option>').join('');
+      }
+      const vars = () => ["--serif: '" + state.font + "', Georgia, serif;", '--serif-w: ' + state.weight + ';', '--serif-axes: normal;'];
+      function paint(f) {
+        const d = f.contentDocument;
+        if (!d || !d.head) return;
+        const id = 'gf-' + state.font.replace(/ /g, '-');
+        if (!d.getElementById(id)) {
+          const l = d.createElement('link');
+          l.id = id; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=' + gfFamily(find(state.font)) + '&display=swap';
+          d.head.appendChild(l);
+        }
+        let s = d.getElementById('serif-test');
+        if (!s) { s = d.createElement('style'); s.id = 'serif-test'; d.head.appendChild(s); }
+        s.textContent = 'astro-dev-toolbar { display: none !important; }\n:root { ' + vars().map((v) => v.replace(';', ' !important;')).join(' ') + ' }';
+      }
+      function render() {
+        items.forEach((li) => li.classList.toggle('on', li.dataset.font === state.font));
+        document.documentElement.style.setProperty('--w', state.weight);
+        const F = find(state.font);
+        $('css').textContent = '/* styles/type.css */\n' + vars().join('\n') +
+          '\n\n/* SoulCard.jsx — card name size so "The Cartographer" fits */\nfontSize: ' + (fitPx[state.font] || 25) + 'px' +
+          '\n\n/* Google Fonts link (index.astro and the soul page) */\nfamily=' + gfFamily(F) +
+          (F[2] ? '' : '\n\n/* no true italic: the italic "soul" would be slanted by the browser */');
+        frames.forEach(paint);
+      }
+      function pick(f) { state.font = f; fillWeights(); render(); }
+
+      // the largest card-name size (up to 28px) at which the longest soul name fits the card's 196px
+      const fitPx = {};
+      function checkFit() {
+        items.forEach((li) => {
+          const n = li.querySelector('.card-name'), ok = li.querySelector('.ok');
+          n.style.fontWeight = li.dataset.font === state.font ? state.weight : find(li.dataset.font)[1][0];
+          const w25 = n.getBoundingClientRect().width;
+          const px = Math.min(28, Math.floor((25 * 196 / w25) * 2) / 2);
+          fitPx[li.dataset.font] = px;
+          ok.textContent = 'card names fit at ' + px + 'px';
+          ok.className = 'ok ' + (px >= 24 ? 'yes' : 'no');
+        });
+        render();
+      }
+
+      items.forEach((li) => {
+        li.addEventListener('click', () => { pick(li.dataset.font); checkFit(); });
+        li.addEventListener('keydown', (e) => {
+          const i = items.indexOf(li), n = e.key === 'ArrowDown' ? items[i + 1] : e.key === 'ArrowUp' ? items[i - 1] : null;
+          if (n) { e.preventDefault(); n.focus(); pick(n.dataset.font); checkFit(); }
+        });
+      });
+      $('weight').addEventListener('change', (e) => { state.weight = +e.target.value; render(); checkFit(); });
+      $('open').addEventListener('click', () => frames.forEach((f) => {
+        const w = f.contentWindow.__wheel; if (!w) return;
+        if (w.open) w.close(); else w.cardClick(w.frame().active);
+      }));
+      $('copy').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText($('css').textContent); $('copy').textContent = 'Copied'; } catch (e) { $('copy').textContent = 'Select the text above'; }
+        setTimeout(() => { $('copy').textContent = 'Copy'; }, 1400);
+      });
+      frames.forEach((f) => f.addEventListener('load', () => paint(f)));
+
+      function fit() {
+        const box = document.querySelector('.previews');
+        const maxW = box.clientWidth - 48, maxH = window.innerHeight - 80;
+        document.querySelectorAll('.view').forEach((v) => {
+          const w = +v.dataset.w, h = +v.dataset.h, k = Math.min(1, maxW / w, maxH / h);
+          v.querySelector('iframe').style.transform = 'scale(' + k + ')';
+          v.style.width = w * k + 'px'; v.style.height = h * k + 'px';
+        });
+      }
+      window.addEventListener('resize', fit);
+      fit(); fillWeights(); render();
+      document.fonts.ready.then(checkFit);
+    </script>
+
+    <style is:global>
+      :root { --w: 400; }
+      body { margin: 0; display: flex; height: 100vh; font: 13px/1.4 system-ui, sans-serif; background: #E7E2D8; color: #141210; }
+      .side { width: 440px; flex: none; display: flex; flex-direction: column; background: #F4F0E8; border-right: 1px solid #D8D0C0; }
+      .pg-nav { display: flex; gap: 4px; padding: 10px 12px; border-bottom: 1px solid #E4DCCB; }
+      .pg-nav a { padding: 4px 8px; border-radius: 6px; color: #6B6358; text-decoration: none; }
+      .pg-nav a:hover { background: #EFE9DD; color: #141210; }
+      .pg-nav a.on { background: #141210; color: #F4F0E8; }
+      .side header { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 16px 6px; }
+      .hint { color: #8A8174; font-size: 12px; }
+      .controls { display: flex; gap: 12px; align-items: center; padding: 4px 16px 12px; border-bottom: 1px solid #E4DCCB; }
+      .controls label { display: flex; align-items: center; gap: 6px; color: #4A443C; }
+      select { font: inherit; padding: 2px 4px; border-radius: 6px; border: 1px solid #CFC6B6; background: #FFF; }
+      button { font: inherit; padding: 5px 12px; border-radius: 8px; border: 1px solid #CFC6B6; background: #FFF; cursor: pointer; }
+      #list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; }
+      #list li { padding: 12px 16px; border-bottom: 1px solid #ECE5D7; cursor: pointer; outline: none; }
+      #list li:hover { background: #EFE9DD; }
+      #list li.on { background: #FFF; box-shadow: inset 3px 0 0 #141210; }
+      #list li:focus-visible { box-shadow: inset 0 0 0 2px #141210; }
+      .name { display: flex; justify-content: space-between; gap: 8px; color: #4A443C; font-size: 12px; margin-bottom: 6px; }
+      .name em { font-style: normal; color: #A39A8C; }
+      .spec { font-size: 28px; line-height: 1.05; letter-spacing: -0.02em; font-weight: var(--w); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .fit { display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px; }
+      .card-name { font-size: 25px; letter-spacing: -0.025em; white-space: nowrap; }
+      .ok { font: 11px ui-monospace, monospace; }
+      .ok.yes { color: #2F7D4F; } .ok.no { color: #B3261E; }
+      .side footer { padding: 12px 16px; border-top: 1px solid #E4DCCB; display: flex; gap: 10px; align-items: flex-end; }
+      pre { flex: 1; margin: 0; font: 11px/1.5 ui-monospace, monospace; color: #4A443C; white-space: pre-wrap; word-break: break-all; user-select: all; }
+      .previews { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; align-content: flex-start; padding: 24px; overflow: auto; }
+      figure { margin: 0; }
+      .view { position: relative; overflow: hidden; border-radius: 8px; background: #F4F0E8; box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06); }
+      .view iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; }
+      figcaption { margin-top: 6px; color: #4A443C; }
+    </style>
+  </body>
+</html>

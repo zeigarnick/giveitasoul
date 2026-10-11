@@ -1,0 +1,251 @@
+---
+// Dev only, at /dev/logo (registered for the dev server in astro.config.mjs): a playground for the giveitasoul wordmark. The logo is rebuilt live
+// from the sliders and shown large, in the top bars, on dark and as a favicon.
+import Nav from './Nav.astro';
+import './pg.css';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Logo · giveitasoul dev</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Serif+Display:ital@0;1&family=Young+Serif&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Onest:wght@400..900&family=Gabarito:wght@400..900&family=Caveat:wght@500..700&display=swap" />
+  </head>
+  <body class="pg">
+    <aside class="pg-side">
+      <Nav on="logo" />
+      <div class="pg-controls" id="controls"></div>
+      <div class="pg-out"><pre id="out"></pre><button id="copy">Copy</button></div>
+    </aside>
+    <main class="pg-stage lg-stage">
+      <div class="lg-hero" data-logo data-scale="3"></div>
+      <span class="pg-cap">3×</span>
+
+      <div class="lg-bar is-desk">
+        <span data-logo data-scale="1"></span>
+        <span class="lg-ghost lg-ghost-toggle"></span>
+        <span class="lg-ghost lg-ghost-credit"></span>
+      </div>
+      <span class="pg-cap">desktop top bar</span>
+
+      <div class="lg-row">
+        <div class="lg-phone">
+          <div class="lg-bar is-phone"><span data-logo data-scale="0.86"></span><span class="lg-ghost lg-ghost-toggle is-small"></span></div>
+        </div>
+        <div class="lg-dark"><span data-logo data-scale="1.6" data-dark></span></div>
+        <div class="lg-icons">
+          <span data-icon="64"></span><span data-icon="32"></span><span data-icon="16"></span>
+        </div>
+      </div>
+      <span class="pg-cap">phone · on dark · favicon 64 / 32 / 16</span>
+    </main>
+
+    <style id="live" is:inline></style>
+    <style is:global>
+      .lg-stage { gap: 18px; }
+      .lg-hero { padding: 24px 0; }
+      .lg-bar { display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; background: #F4F0E8; box-shadow: 0 0 0 1px rgba(20,18,16,0.08); border-radius: 10px; }
+      .lg-bar.is-desk { width: min(100%, 980px); padding: 28px 56px; }
+      .lg-bar.is-phone { width: 300px; padding: 16px 18px; }
+      .lg-ghost { display: block; height: 34px; border-radius: 99px; background: rgba(20,18,16,0.07); }
+      .lg-ghost-toggle { width: 260px; }
+      .lg-ghost-toggle.is-small { width: 150px; height: 30px; }
+      .lg-ghost-credit { width: 150px; background: none; box-shadow: inset 0 0 0 1px rgba(20,18,16,0.2); }
+      .lg-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: center; }
+      .lg-dark { padding: 26px 34px; border-radius: 10px; background: #141210; }
+      .lg-icons { display: flex; align-items: flex-end; gap: 12px; padding: 14px; border-radius: 10px; background: #FFF; box-shadow: 0 0 0 1px rgba(20,18,16,0.08); }
+      .lg-icons span { display: block; line-height: 0; }
+      /* the logo itself; sizes and colours come from #live */
+      .lg { position: relative; display: inline-flex; align-items: center; text-decoration: none; white-space: nowrap; }
+      .lg-word { position: relative; display: inline-flex; align-items: baseline; }
+      .lg-it { position: relative; display: inline-block; }
+      .lg-it > svg, .lg-caret > svg { position: absolute; overflow: visible; pointer-events: none; }
+      .lg-caret { position: relative; display: inline-block; width: 0; }
+      .lg-ins { position: absolute; left: 50%; transform: translateX(-50%); font-family: Caveat, cursive; white-space: nowrap; }
+      .lg-icon { flex: none; display: block; overflow: visible; }
+    </style>
+
+    <script>
+      import { panel, copyButton } from './panel.js';
+
+      const FONTS = {
+        'Instrument Serif': { ff: "'Instrument Serif', Georgia, serif", varW: false, w: 400 },
+        'Instrument Serif Italic': { ff: "'Instrument Serif', Georgia, serif", varW: false, w: 400, italic: true },
+        'DM Serif Display': { ff: "'DM Serif Display', Georgia, serif", varW: false, w: 400 },
+        'Young Serif': { ff: "'Young Serif', Georgia, serif", varW: false, w: 400 },
+        Fraunces: { ff: "Fraunces, Georgia, serif", varW: true },
+        'Bricolage Grotesque': { ff: "'Bricolage Grotesque', sans-serif", varW: true },
+        Onest: { ff: "Onest, sans-serif", varW: true },
+        Gabarito: { ff: "Gabarito, sans-serif", varW: true }
+      };
+      const schema = [
+        { type: 'heading', label: 'Wordmark' },
+        { key: 'font', label: 'Typeface', type: 'select', options: Object.keys(FONTS), value: 'Instrument Serif' },
+        { key: 'weight', label: 'Weight (variable)', type: 'range', min: 300, max: 900, step: 50, value: 600 },
+        { key: 'size', label: 'Size', type: 'range', min: 18, max: 40, value: 28, unit: 'px' },
+        { key: 'track', label: 'Tracking', type: 'range', min: -0.08, max: 0.04, step: 0.005, value: -0.03, unit: 'em' },
+        { key: 'words', label: 'Words', type: 'select', options: ['joined', 'spaced'], value: 'joined' },
+        { key: 'soulItalic', label: 'Italic "soul"', type: 'check', value: false },
+        { key: 'ink', label: 'Ink', type: 'color', value: '#141210' },
+        { type: 'heading', label: '"it"' },
+        { key: 'treat', label: 'Treatment', type: 'select', options: ['swoosh', 'strike', 'circle', 'highlight', 'caret', 'colour', 'none'], value: 'swoosh' },
+        { key: 'itColor', label: '"it" colour', type: 'color', value: '#8A8174' },
+        { key: 'mark', label: 'Mark colour', type: 'color', value: '#D22E1E' },
+        { key: 'stroke', label: 'Stroke', type: 'range', min: 1, max: 6, step: 0.25, value: 2.25, unit: 'px' },
+        { key: 'curve', label: 'Curve', type: 'range', min: -1, max: 1, step: 0.05, value: 0.4 },
+        { key: 'offY', label: 'Offset', type: 'range', min: -0.3, max: 0.3, step: 0.01, value: 0, unit: 'em' },
+        { key: 'tilt', label: 'Tilt', type: 'range', min: -15, max: 15, step: 0.5, value: 0, unit: '°' },
+        { type: 'heading', label: 'Icon' },
+        { key: 'icon', label: 'Icon', type: 'select', options: ['none', 'flame', 'soul wisp', 'card flame', 'card', 'fan', 'spark', 'ring'], value: 'none' },
+        { key: 'flame', label: 'Flame colour', type: 'color', value: '#ec4e32' },
+        { key: 'flameIn', label: 'Inner colour', type: 'color', value: '#F6B26B' },
+        { key: 'flameStyle', label: 'Flame style', type: 'select', options: ['two-tone', 'filled', 'outline'], value: 'two-tone' },
+        { key: 'eyes', label: 'Eyes on the flame', type: 'check', value: false },
+        { key: 'lean', label: 'Lean', type: 'range', min: -20, max: 20, step: 1, value: 0, unit: '°' },
+        { key: 'tall', label: 'Height', type: 'range', min: 0.8, max: 1.25, step: 0.01, value: 1, unit: '×' },
+        { key: 'iconSize', label: 'Size', type: 'range', min: 0.6, max: 1.4, step: 0.05, value: 1, unit: 'em' },
+        { key: 'iconGap', label: 'Gap', type: 'range', min: 0, max: 0.6, step: 0.02, value: 0.16, unit: 'em' },
+        { key: 'favicon', label: 'Favicon', type: 'select', options: ['initial + mark', 'icon'], value: 'initial + mark' }
+      ];
+      const presets = {
+        Current: {},
+        'Struck it': { treat: 'strike', itColor: '#141210', curve: 0.2, tilt: -3, stroke: 2.5 },
+        'Proofread caret': { treat: 'caret', mark: '#D22E1E', itColor: '#D22E1E', stroke: 2, tilt: -6 },
+        'Circled it': { treat: 'circle', itColor: '#141210', stroke: 2, tilt: -8 },
+        Highlighter: { treat: 'highlight', itColor: '#141210', mark: '#F2C94C' },
+        'Italic soul': { treat: 'none', soulItalic: true, words: 'joined' },
+        'Heavy sans': { font: 'Gabarito', weight: 800, track: -0.05, size: 26, treat: 'colour', itColor: '#D22E1E' },
+        'Bricolage + fan': { font: 'Bricolage Grotesque', weight: 750, track: -0.05, size: 26, treat: 'colour', itColor: '#8A8174', icon: 'fan', favicon: 'icon' },
+        'Fraunces + card': { font: 'Fraunces', weight: 600, track: -0.03, treat: 'swoosh', icon: 'card', favicon: 'icon' },
+        // your Gabarito wordmark with each soul flame
+        'Flame': { font: 'Gabarito', weight: 700, track: -0.015, itColor: '#999999', mark: '#ec4e32', offY: 0.02, tilt: -11, icon: 'flame', favicon: 'icon', iconGap: 0.12 },
+        'Soul wisp': { font: 'Gabarito', weight: 700, track: -0.015, itColor: '#999999', mark: '#ec4e32', offY: 0.02, tilt: -11, icon: 'soul wisp', eyes: true, favicon: 'icon', iconGap: 0.12 },
+        'Card flame': { font: 'Gabarito', weight: 700, track: -0.015, itColor: '#999999', mark: '#ec4e32', offY: 0.02, tilt: -11, icon: 'card flame', favicon: 'icon', iconGap: 0.12 }
+      };
+
+      let S = null;
+      const live = document.getElementById('live');
+
+      // the hand-drawn marks, drawn in a 100×100 box laid over "it" (strokes keep their width when it stretches).
+      // At curve 0.4 the swoosh is the live logo's: from 0.66em down at the left of "it" to 0.55em past its right.
+      function markPath() {
+        const c = (S.curve - 0.4) * 12;
+        switch (S.treat) {
+          case 'swoosh': return `M-6 66 C 33 ${60 - c}, 83 ${63 - c}, 139 55`;
+          case 'strike': return `M-14 52 C 26 ${46 - c}, 74 ${49 - c}, 118 40`;
+          case 'circle': return `M58 6 C 104 2, 122 38, 104 70 C 88 98, 8 100, -6 66 C -16 34, 14 0, 68 10`;
+          default: return '';
+        }
+      }
+      const svgMark = (cls, d, style) =>
+        `<svg class="${cls}" viewBox="0 0 100 100" preserveAspectRatio="none" style="${style}" aria-hidden="true"><path d="${d}" fill="none" stroke="currentColor" stroke-width="${S.stroke}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" /></svg>`;
+
+      // a flame (or wisp) shape in a 32×32 box, standing on its base so lean and height pivot from the bottom
+      function flameSvg(outer, inner, eyeY, extra = '') {
+        const outline = S.flameStyle === 'outline';
+        const body = outline
+          ? `<path d="${outer}" fill="none" stroke="${S.flame}" stroke-width="2.4" stroke-linejoin="round"/>`
+          : `<path d="${outer}" fill="${S.flame}"/>` + (S.flameStyle === 'two-tone' && inner ? `<path d="${inner}" fill="${S.flameIn}"/>` : '');
+        const eyeC = outline ? S.flame : S.flameStyle === 'two-tone' && inner ? S.ink : '#F4F0E8';
+        const eyes = S.eyes ? `<circle cx="13.2" cy="${eyeY}" r="1.5" fill="${eyeC}"/><circle cx="18.8" cy="${eyeY}" r="1.5" fill="${eyeC}"/>` : '';
+        return `<g transform="translate(16 30) rotate(${S.lean}) scale(1 ${S.tall}) translate(-16 -30)">${extra}${body}${eyes}</g>`;
+      }
+      const FLAME = {
+        flame: ['M16 2.5 C 18.5 7.5, 25.5 11.5, 25.5 19.5 C 25.5 25.5, 21.2 29.5, 16 29.5 C 10.8 29.5, 6.5 25.5, 6.5 19.5 C 6.5 15, 9 12.5, 10.5 8.5 C 12 11, 12.6 12.8, 13 14.5 C 14.8 11.5, 16.4 7.5, 16 2.5 Z',
+          'M16 13 C 17.5 16.5, 21 18.5, 21 22.5 C 21 26, 18.8 28, 16 28 C 13.2 28, 11 26, 11 23 C 11 20.5, 12.6 19, 13.4 17 C 14.2 18.4, 14.6 19.3, 14.8 20.3 C 15.8 18.5, 16.3 15.8, 16 13 Z', 22],
+        'soul wisp': ['M16 29.5 C 10.2 29.5, 6.5 25.6, 6.5 20.8 C 6.5 16, 10 13.2, 13.8 11.2 C 17.6 9.2, 19.8 6.4, 18.2 2.5 C 23.6 4.8, 25.6 10.2, 24.6 14.6 C 25.3 16.4, 25.5 18.6, 25.5 20.8 C 25.5 25.6, 21.8 29.5, 16 29.5 Z',
+          'M16 27.6 C 12.6 27.6, 10.4 25.4, 10.4 22.6 C 10.4 19.8, 12.6 18.2, 15 17.2 C 17.4 16.2, 19 15, 19.4 13.4 C 21.2 15, 21.6 17.4, 21.6 19.6 C 21.6 20.6, 21.6 21.6, 21.6 22.6 C 21.6 25.4, 19.4 27.6, 16 27.6 Z', 21.5],
+        'card flame': ['M16 3 C 17.6 6.2, 21.6 8.6, 21.6 13.2 C 21.6 16.6, 19.1 18.8, 16 18.8 C 12.9 18.8, 10.4 16.6, 10.4 13.4 C 10.4 10.8, 11.8 9.4, 12.6 7.2 C 13.5 8.6, 13.9 9.6, 14.1 10.6 C 15.3 8.8, 16.2 6, 16 3 Z',
+          'M16 9.5 C 16.9 11.4, 18.8 12.6, 18.8 15 C 18.8 16.8, 17.6 17.8, 16 17.8 C 14.4 17.8, 13.2 16.8, 13.2 15.2 C 13.2 13.8, 14 13, 14.4 11.8 C 14.9 12.6, 15.1 13.2, 15.2 13.8 C 15.8 12.8, 16.2 11.2, 16 9.5 Z', 14]
+      };
+
+      function icon(size, dark) {
+        const ink = dark ? '#F4F0E8' : S.ink;
+        if (FLAME[S.icon]) {
+          const [o, i, ey] = FLAME[S.icon];
+          // card flame: a soul card under the flame, its top edge where the flame stands
+          const card = S.icon === 'card flame' ? `<rect x="7" y="15" width="18" height="15" rx="3.5" fill="${dark ? '#F4F0E8' : S.ink}"/><path d="M10.5 25.5 C 13.5 24.4, 17.5 24.8, 21.5 23" stroke="${S.flame}" stroke-width="1.6" stroke-linecap="round" fill="none"/>` : '';
+          return `<svg class="lg-icon" width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true">${card}${flameSvg(o, i, ey)}</svg>`;
+        }
+        switch (S.icon) {
+          case 'card': return `<svg class="lg-icon" width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true"><rect x="8" y="4" width="17" height="24" rx="4" transform="rotate(-10 16 16)" fill="#1E5FD0"/><path d="M11 21 C 14 19.5, 18 20, 22 17.5" transform="rotate(-10 16 16)" stroke="#F4F0E8" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>`;
+          case 'fan': return `<svg class="lg-icon" width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true"><rect x="9" y="6" width="13" height="19" rx="3" transform="rotate(-22 16 28)" fill="#E0501A"/><rect x="9" y="6" width="13" height="19" rx="3" transform="rotate(22 16 28)" fill="#2E7D4F"/><rect x="9.5" y="4" width="13" height="19" rx="3" fill="#1E5FD0"/></svg>`;
+          case 'spark': return `<svg class="lg-icon" width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 C 17 12, 20 15, 29 16 C 20 17, 17 20, 16 29 C 15 20, 12 17, 3 16 C 12 15, 15 12, 16 3 Z" fill="${S.mark}"/></svg>`;
+          case 'ring': return `<svg class="lg-icon" width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 5 C 28 5, 30 15, 27 21 C 23 29, 8 29, 5 20 C 2 11, 10 4, 21 7" fill="none" stroke="${S.mark}" stroke-width="3" stroke-linecap="round"/><circle cx="16" cy="17" r="3.2" fill="${ink}"/></svg>`;
+          default: return '';
+        }
+      }
+
+      // the logo's markup (dark: on the dark swatch)
+      function markup(dark) {
+        const sp = S.words === 'spaced' ? ' ' : '';
+        const soul = S.soulItalic ? '<em class="lg-soul">soul</em>' : 'soul';
+        const ic = S.icon !== 'none' ? icon('1em', dark) : '';
+        let it;
+        if (S.treat === 'caret') {
+          it = `<span class="lg-caret"><span class="lg-ins">it</span>${svgMark('lg-caret-mark', 'M10 30 L50 78 L90 30', '')}</span>`;
+          return `<a href="/" class="lg" aria-label="give it a soul, home">${ic}<span class="lg-word">give${sp}${it}a${sp}${soul}</span></a>`;
+        }
+        const d = markPath();
+        it = `<span class="lg-it">it${d ? svgMark('lg-mark', d, '') : ''}</span>`;
+        return `<a href="/" class="lg" aria-label="give it a soul, home">${ic}<span class="lg-word">give${sp}${it}${sp}a${sp}${soul}</span></a>`;
+      }
+
+      function css() {
+        const F = FONTS[S.font];
+        const w = F.varW ? S.weight : F.w;
+        const it =
+          S.treat === 'highlight' ? `color: ${S.itColor}; background: linear-gradient(transparent 52%, ${S.mark}99 52%, ${S.mark}99 88%, transparent 88%); padding: 0 0.06em; margin: 0 -0.06em; border-radius: 0.08em; transform: rotate(${S.tilt / 4}deg);`
+          : S.treat === 'none' ? 'color: inherit;'
+          : `color: ${S.itColor};`;
+        return `.lg { gap: ${S.iconGap}em; font-family: ${F.ff}; font-weight: ${w}; ${F.italic ? 'font-style: italic; ' : ''}font-size: ${S.size}px; letter-spacing: ${S.track}em; color: ${S.ink}; line-height: 1; }
+.lg .lg-icon { width: ${S.iconSize}em; height: ${S.iconSize}em; }
+.lg-it { ${it} }
+.lg-mark { left: 0; top: ${S.offY}em; width: 100%; height: 1em; color: ${S.mark}; transform: rotate(${S.tilt}deg); transform-origin: 50% 70%; }
+.lg-soul { font-style: italic; }
+.lg-caret { margin: 0 0.04em; }
+.lg-ins { bottom: ${0.62 + S.offY}em; font-size: 0.62em; font-weight: 700; color: ${S.itColor}; transform: translateX(-50%) rotate(${S.tilt}deg); letter-spacing: 0; }
+.lg-caret-mark { left: -0.16em; width: 0.32em; height: 0.42em; bottom: -0.06em; color: ${S.mark}; }
+.lg-dark .lg { color: #F4F0E8; }
+.lg-dark .lg-it { ${S.treat === 'colour' || S.treat === 'swoosh' ? `color: ${S.itColor === '#8A8174' ? '#A39A8C' : S.itColor};` : ''} }`;
+      }
+
+      // favicon: the icon, or the wordmark's initial ("s" for soul) with the mark
+      function favicon(px) {
+        const F = FONTS[S.font];
+        if (S.favicon === 'icon' && S.icon !== 'none') {
+          return `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#F4F0E8"/><g transform="translate(8 8) scale(1.5)">${icon(32).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></svg>`;
+        }
+        const st = F.italic || S.soulItalic || S.font === 'Instrument Serif' ? 'italic' : 'normal';
+        const w = F.varW ? S.weight : F.w;
+        const mark = S.treat === 'none' || S.treat === 'colour' || S.treat === 'highlight' || S.treat === 'caret' ? '' :
+          `<path d="M14 40 C 26 ${36 - S.curve * 4}, 38 ${38 - S.curve * 4}, 50 30" stroke="${S.mark}" stroke-width="${S.stroke * 1.3}" stroke-linecap="round" fill="none"/>`;
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#F4F0E8"/><text x="32" y="46" text-anchor="middle" font-family="${F.ff.replace(/"/g, "'")}" font-style="${st}" font-weight="${w}" font-size="40" fill="${S.ink}">s</text>${mark}</svg>`;
+      }
+
+      function render() {
+        live.textContent = css();
+        document.querySelectorAll('[data-logo]').forEach((el) => {
+          el.innerHTML = markup(el.hasAttribute('data-dark'));
+          el.style.zoom = el.dataset.scale;
+        });
+        document.querySelectorAll('[data-icon]').forEach((el) => { el.innerHTML = favicon(+el.dataset.icon); });
+        const jsx = markup(false).replace(/class=/g, 'className=').replace(/stroke-width=/g, 'strokeWidth=').replace(/stroke-linecap=/g, 'strokeLinecap=').replace(/stroke-linejoin=/g, 'strokeLinejoin=').replace(/vector-effect=/g, 'vectorEffect=').replace(/style=""/g, '');
+        document.getElementById('out').textContent =
+`/* TopBar.jsx — the logo (soul pages use the same markup with class=) */
+${jsx}
+
+/* landing.css (and the soul page's styles) */
+${css().split('\n').filter((l) => !l.startsWith('.lg-dark')).join('\n')}
+
+/* public/favicon.svg */
+${favicon(64).replace(/ width="64" height="64"/, '')}`;
+      }
+
+      panel(document.getElementById('controls'), { tool: 'logo', schema, presets, onChange: (state) => { S = state; render(); } });
+      copyButton(document.getElementById('copy'), () => document.getElementById('out').textContent);
+      document.fonts && document.fonts.ready.then(() => S && render());
+    </script>
+  </body>
+</html>

@@ -1,0 +1,129 @@
+---
+// Dev only, at /dev/viewports (registered for the dev server in astro.config.mjs): the landing at many window sizes side by side, with buttons that drive
+// every frame at once.
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Viewports · giveitasoul dev</title>
+  </head>
+  <body>
+    <header class="bar">
+      <strong>Viewports</strong>
+      <div class="group">
+        <button data-act="reset">Reload all</button>
+        <button data-act="hover">Hover centre card</button>
+        <button data-act="next">Next card</button>
+        <button data-act="open">Open card</button>
+        <button data-act="flip">Use this soul</button>
+        <button data-act="deck">Switch deck</button>
+        <button data-act="close">Close</button>
+      </div>
+      <label class="group">Frame height
+        <input id="size" type="range" min="200" max="900" step="20" value="360" />
+      </label>
+      <form id="custom" class="group">
+        <input name="w" type="number" min="280" placeholder="width" />
+        <input name="h" type="number" min="280" placeholder="height" />
+        <button>Add size</button>
+      </form>
+    </header>
+    <main id="grid"></main>
+
+    <script is:inline>
+      // [width, height, label]
+      const SIZES = [
+        [2560, 1440, '1440p monitor'], [1920, 1080, '1080p'], [1440, 900, 'MacBook Air'], [1366, 768, 'budget laptop'],
+        [1280, 720, 'small laptop'], [1024, 768, 'iPad landscape'], [768, 1024, 'iPad portrait'], [844, 390, 'phone landscape'],
+        [430, 932, 'iPhone Pro Max'], [390, 844, 'iPhone'], [375, 667, 'iPhone SE'], [360, 640, 'small Android']
+      ];
+      const grid = document.getElementById('grid'), size = document.getElementById('size');
+      const frames = [];
+
+      function add(w, h, label) {
+        const cell = document.createElement('figure');
+        const view = document.createElement('div');
+        const f = document.createElement('iframe');
+        const cap = document.createElement('figcaption');
+        view.className = 'view';
+        f.width = w; f.height = h; f.src = '/';
+        f.addEventListener('load', () => {
+          // hide Astro's dev toolbar inside the frames
+          const s = f.contentDocument.createElement('style');
+          s.textContent = 'astro-dev-toolbar { display: none !important; }';
+          f.contentDocument.head.appendChild(s);
+        });
+        cap.innerHTML = '<span>' + w + '×' + h + ' <em>' + (label || '') + '</em></span><span class="tier"></span>';
+        view.appendChild(f); cell.append(view, cap); grid.appendChild(cell);
+        frames.push({ f, w, h, view, cap });
+        fit();
+      }
+      // frames render at their real size (so the page sees the real window) and are scaled down to display
+      function fit() {
+        const H = +size.value;
+        for (const { f, w, h, view } of frames) {
+          const k = H / h;
+          f.style.transform = 'scale(' + k + ')';
+          view.style.width = w * k + 'px'; view.style.height = H + 'px';
+        }
+      }
+      size.addEventListener('input', fit);
+      // each frame's tier and fan scale, once its wheel is running
+      setInterval(() => {
+        for (const { f, cap } of frames) {
+          const L = f.contentWindow && f.contentWindow.__wheel && f.contentWindow.__wheel.L;
+          cap.querySelector('.tier').textContent = L ? L.tier + ' · K ' + L.K.toFixed(2) : '';
+        }
+      }, 1000);
+      SIZES.forEach((s) => add(...s));
+      document.getElementById('custom').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const d = new FormData(e.target), w = +d.get('w'), h = +d.get('h');
+        if (w && h) add(w, h, 'custom');
+      });
+
+      const wheel = (f) => f.contentWindow && f.contentWindow.__wheel;
+      const centreCard = (f) => { const w = wheel(f); return w && f.contentDocument.querySelectorAll('.fancard')[w.frame().active]; };
+      const ACTS = {
+        reset: (f) => f.contentWindow.location.reload(),
+        next: (f) => wheel(f) && wheel(f).next(),
+        open: (f) => { const w = wheel(f); if (w) w.cardClick(w.frame().active); },
+        flip: (f) => { const b = f.contentDocument.querySelector('.sheet .btn-primary'); if (b) b.click(); },
+        deck: (f) => { const w = wheel(f); if (w) w.pickDeck(w.deck === 'mbti' ? 'ennea' : 'mbti'); },
+        close: (f) => { const w = wheel(f); if (w && w.open) w.close(); },
+        // a mouse resting on the centre card's upper right, which tilts it and moves the glare
+        hover: (f) => {
+          const c = centreCard(f), root = f.contentDocument.querySelector('.wheel');
+          if (!c || !root) return;
+          const r = c.getBoundingClientRect();
+          const ev = new f.contentWindow.PointerEvent('pointermove', { bubbles: true, pointerType: 'mouse', clientX: r.left + r.width * 0.75, clientY: r.top + r.height * 0.25 });
+          root.dispatchEvent(ev);
+        }
+      };
+      document.querySelector('.bar').addEventListener('click', (e) => {
+        const act = e.target.dataset && e.target.dataset.act;
+        if (!act) return;
+        for (const { f } of frames) { try { ACTS[act](f); } catch (err) { console.warn(act, err); } }
+      });
+    </script>
+
+    <!-- global: the frames and captions are built by the script, so scoped styles would miss them -->
+    <style is:global>
+      body { margin: 0; font: 13px/1.4 system-ui, sans-serif; background: #E7E2D8; color: #141210; }
+      .bar { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 12px 16px; background: #F4F0E8; border-bottom: 1px solid #D8D0C0; }
+      .group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+      button { font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid #CFC6B6; background: #FFF; cursor: pointer; }
+      button:hover { background: #F7F3EA; }
+      input[type='number'] { width: 72px; font: inherit; padding: 5px 6px; border-radius: 6px; border: 1px solid #CFC6B6; }
+      #grid { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 20px; padding: 16px; }
+      figure { margin: 0; }
+      .view { position: relative; overflow: hidden; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06); background: #F4F0E8; }
+      iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; }
+      figcaption { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; color: #4A443C; }
+      figcaption em { color: #8A8174; font-style: normal; }
+      .tier { font-family: ui-monospace, monospace; font-size: 11px; color: #8A8174; }
+    </style>
+  </body>
+</html>

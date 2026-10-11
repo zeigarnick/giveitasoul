@@ -1,0 +1,196 @@
+---
+// Dev only, at /dev/fonts (registered for the dev server in astro.config.mjs): try typefaces for the landing's UI text (the counter, its hint and the
+// pull-down hint) on the live page. Each candidate is open source on Google Fonts. Picking one restyles the
+// previews through the --ui-* variables in landing.css; "Copy CSS" gives the values to keep.
+
+// [family, weights it ships, note]
+const FONTS = [
+  ['Rubik', [500, 600, 700, 800], 'softened corners, chunky'],
+  ['Figtree', [500, 600, 700, 800], 'clean, friendly geometric'],
+  ['Nunito', [500, 600, 700, 800], 'fully rounded, playful'],
+  ['Plus Jakarta Sans', [500, 600, 700, 800], 'modern geometric'],
+  ['Manrope', [500, 600, 700, 800], 'semi-condensed, techy'],
+  ['Onest', [500, 600, 700, 800], 'warm grotesk'],
+  ['Outfit', [500, 600, 700, 800], 'round geometric'],
+  ['Inter Tight', [500, 600, 700, 800], 'neutral, tight'],
+  ['DM Sans', [500, 600, 700, 800], 'low-contrast geometric'],
+  ['Gabarito', [500, 600, 700, 800], 'bold, bouncy geometric'],
+  ['Instrument Sans', [500, 600, 700], 'crisp grotesk'],
+  ['Hanken Grotesk', [500, 600, 700, 800], 'friendly grotesk'],
+  ['Urbanist', [500, 600, 700, 800], 'geometric, open'],
+  ['Lexend', [500, 600, 700, 800], 'wide, very legible'],
+  ['Sora', [500, 600, 700, 800], 'wide geometric'],
+  ['Golos Text', [500, 600, 700, 800], 'sturdy UI grotesk'],
+  ['Albert Sans', [500, 600, 700, 800], 'Scandinavian geometric'],
+  ['M PLUS Rounded 1c', [500, 700, 800], 'rounded terminals'],
+  ['Baloo 2', [500, 600, 700, 800], 'soft, very friendly'],
+  ['Geist', [500, 600, 700, 800], "the site's body font"],
+];
+const href = (f, w) => `https://fonts.googleapis.com/css2?family=${f.replace(/ /g, '+')}:wght@${w.join(';')}&display=swap`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fonts · giveitasoul dev</title>
+    {FONTS.map(([f, w]) => <link rel="stylesheet" href={href(f, w)} />)}
+  </head>
+  <body>
+    <aside class="side">
+      <header>
+        <strong>UI font</strong>
+        <span class="hint">click a font or use ↑ ↓</span>
+      </header>
+      <div class="controls">
+        <label>Numbers <select id="bold"></select></label>
+        <label>Hint <select id="semi"></select></label>
+        <label>Size <input id="size" type="range" min="12" max="18" step="0.5" value="14" /> <output id="sizeOut">14px</output></label>
+        <label>Tracking <input id="track" type="range" min="-0.04" max="0.03" step="0.005" value="-0.01" /> <output id="trackOut">-0.01em</output></label>
+        <label class="check"><input id="toggle" type="checkbox" /> Also the MBTI / Enneagram toggle</label>
+        <label class="check"><input id="pin" type="checkbox" /> Show the pull-down hint</label>
+      </div>
+      <ul id="list">
+        {FONTS.map(([f, w, note], i) => (
+          <li data-font={f} data-weights={w.join(',')} tabindex="0" class={i === 0 ? 'on' : ''}>
+            <div class="name"><span>{f}</span><em>{note}</em></div>
+            <div class="spec" style={`font-family: '${f}'`}>
+              <span class="b">01 / 16</span><span class="s"> · drag, or pull down to switch deck</span>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <footer>
+        <pre id="css"></pre>
+        <button id="copy">Copy CSS</button>
+      </footer>
+    </aside>
+    <main class="previews">
+      <figure><div class="view" data-w="1440" data-h="900"><iframe src="/" width="1440" height="900"></iframe></div><figcaption>Desktop 1440×900</figcaption></figure>
+      <figure><div class="view" data-w="390" data-h="844"><iframe src="/" width="390" height="844"></iframe></div><figcaption>Phone 390×844</figcaption></figure>
+    </main>
+
+    <script is:inline define:vars={{ FONTS, gf: 'https://fonts.googleapis.com/css2?family=' }}>
+      const $ = (id) => document.getElementById(id);
+      const items = [...document.querySelectorAll('#list li')];
+      const frames = [...document.querySelectorAll('iframe')];
+      const state = { font: FONTS[0][0], bold: 700, semi: 600, size: 14, track: -0.01, toggle: false, pin: false };
+
+      const weightsOf = (f) => FONTS.find((x) => x[0] === f)[1];
+      const nearest = (ws, w) => ws.reduce((a, b) => (Math.abs(b - w) < Math.abs(a - w) ? b : a));
+      function fillWeights() {
+        const ws = weightsOf(state.font);
+        state.bold = nearest(ws, state.bold); state.semi = nearest(ws, state.semi);
+        for (const [id, v] of [['bold', state.bold], ['semi', state.semi]]) {
+          $(id).innerHTML = ws.map((w) => '<option' + (w === v ? ' selected' : '') + '>' + w + '</option>').join('');
+        }
+      }
+      function css() {
+        return [
+          '--ui-font: ' + "'" + state.font + "', Geist, system-ui, sans-serif;",
+          '--ui-size: ' + state.size + 'px;',
+          '--ui-track: ' + state.track + 'em;',
+          '--ui-bold: ' + state.bold + ';',
+          '--ui-semi: ' + state.semi + ';'
+        ];
+      }
+      // restyle a preview: load the font into it, then override the --ui-* variables (and the extras) with a style tag
+      function paint(f) {
+        const d = f.contentDocument;
+        if (!d || !d.head) return;
+        const id = 'gf-' + state.font.replace(/ /g, '-');
+        if (!d.getElementById(id)) {
+          const l = d.createElement('link');
+          l.id = id; l.rel = 'stylesheet';
+          l.href = gf + state.font.replace(/ /g, '+') + ':wght@' + weightsOf(state.font).join(';') + '&display=swap';
+          d.head.appendChild(l);
+        }
+        let s = d.getElementById('font-test');
+        if (!s) { s = d.createElement('style'); s.id = 'font-test'; d.head.appendChild(s); }
+        s.textContent =
+          'astro-dev-toolbar { display: none !important; }\n' +
+          '.wheel { ' + css().map((l) => l.replace(';', ' !important;')).join(' ') + ' }\n' +
+          (state.toggle ? '.toggle-opt { font-family: var(--ui-font); font-weight: var(--ui-semi); letter-spacing: var(--ui-track); }\n' : '') +
+          (state.pin ? '.deckflip, .deckflip-hint { opacity: 1 !important; } .deckflip-stage { visibility: hidden; }\n' : '');
+      }
+      function render() {
+        items.forEach((li) => li.classList.toggle('on', li.dataset.font === state.font));
+        document.documentElement.style.setProperty('--b', state.bold);
+        document.documentElement.style.setProperty('--s', state.semi);
+        document.documentElement.style.setProperty('--size', state.size + 'px');
+        document.documentElement.style.setProperty('--track', state.track + 'em');
+        $('sizeOut').textContent = state.size + 'px';
+        $('trackOut').textContent = state.track + 'em';
+        const extra = state.toggle ? '\n\n/* and on .toggle-opt */\nfont-family: var(--ui-font);\nfont-weight: var(--ui-semi);\nletter-spacing: var(--ui-track);' : '';
+        $('css').textContent = '/* landing.css, .wheel */\n' + css().join('\n') + extra;
+        frames.forEach(paint);
+      }
+      function pick(f) { state.font = f; fillWeights(); render(); }
+
+      items.forEach((li) => {
+        li.addEventListener('click', () => pick(li.dataset.font));
+        li.addEventListener('keydown', (e) => {
+          const i = items.indexOf(li), n = e.key === 'ArrowDown' ? items[i + 1] : e.key === 'ArrowUp' ? items[i - 1] : null;
+          if (n) { e.preventDefault(); n.focus(); pick(n.dataset.font); }
+        });
+      });
+      $('bold').addEventListener('change', (e) => { state.bold = +e.target.value; render(); });
+      $('semi').addEventListener('change', (e) => { state.semi = +e.target.value; render(); });
+      $('size').addEventListener('input', (e) => { state.size = +e.target.value; render(); });
+      $('track').addEventListener('input', (e) => { state.track = +(+e.target.value).toFixed(3); render(); });
+      $('toggle').addEventListener('change', (e) => { state.toggle = e.target.checked; render(); });
+      $('pin').addEventListener('change', (e) => { state.pin = e.target.checked; render(); });
+      $('copy').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText($('css').textContent); $('copy').textContent = 'Copied'; } catch (e) { $('copy').textContent = 'Select the text above'; }
+        setTimeout(() => { $('copy').textContent = 'Copy CSS'; }, 1400);
+      });
+      frames.forEach((f) => f.addEventListener('load', () => paint(f)));
+
+      // previews render at their real size and are each scaled to fit the space beside the list (they wrap when narrow)
+      function fit() {
+        const box = document.querySelector('.previews');
+        const maxW = box.clientWidth - 48, maxH = window.innerHeight - 80;
+        document.querySelectorAll('.view').forEach((v) => {
+          const w = +v.dataset.w, h = +v.dataset.h, k = Math.min(1, maxW / w, maxH / h);
+          v.querySelector('iframe').style.transform = 'scale(' + k + ')';
+          v.style.width = w * k + 'px'; v.style.height = h * k + 'px';
+        });
+      }
+      window.addEventListener('resize', fit);
+      fit(); fillWeights(); render();
+    </script>
+
+    <!-- global: rows and previews are styled by script-set variables, and the page has no other styles to clash with -->
+    <style is:global>
+      :root { --b: 700; --s: 600; --size: 14px; --track: -0.01em; }
+      body { margin: 0; display: flex; height: 100vh; font: 13px/1.4 system-ui, sans-serif; background: #E7E2D8; color: #141210; }
+      .side { width: 420px; flex: none; display: flex; flex-direction: column; background: #F4F0E8; border-right: 1px solid #D8D0C0; }
+      .side header { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 16px 8px; }
+      .hint { color: #8A8174; font-size: 12px; }
+      .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; padding: 4px 16px 12px; border-bottom: 1px solid #E4DCCB; }
+      .controls label { display: flex; align-items: center; gap: 6px; color: #4A443C; }
+      .controls .check { grid-column: 1 / -1; }
+      .controls input[type='range'] { width: 90px; }
+      output { font-family: ui-monospace, monospace; font-size: 11px; color: #8A8174; }
+      select { font: inherit; padding: 2px 4px; border-radius: 6px; border: 1px solid #CFC6B6; background: #FFF; }
+      #list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; }
+      #list li { padding: 10px 16px; border-bottom: 1px solid #ECE5D7; cursor: pointer; outline: none; }
+      #list li:hover { background: #EFE9DD; }
+      #list li.on { background: #FFF; box-shadow: inset 3px 0 0 #141210; }
+      #list li:focus-visible { box-shadow: inset 0 0 0 2px #141210; }
+      .name { display: flex; justify-content: space-between; gap: 8px; color: #4A443C; font-size: 12px; margin-bottom: 4px; }
+      .name em { font-style: normal; color: #A39A8C; }
+      .spec { font-size: var(--size); letter-spacing: var(--track); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .spec .b { font-weight: var(--b); font-variant-numeric: tabular-nums; }
+      .spec .s { font-weight: var(--s); color: #8A8174; }
+      .side footer { padding: 12px 16px; border-top: 1px solid #E4DCCB; display: flex; gap: 10px; align-items: flex-end; }
+      pre { flex: 1; margin: 0; font: 11px/1.5 ui-monospace, monospace; color: #4A443C; white-space: pre-wrap; user-select: all; }
+      button { font: inherit; padding: 6px 12px; border-radius: 8px; border: 1px solid #CFC6B6; background: #FFF; cursor: pointer; }
+      .previews { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; align-content: flex-start; padding: 24px; overflow: auto; }
+      figure { margin: 0; }
+      .view { position: relative; overflow: hidden; border-radius: 8px; background: #F4F0E8; box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06); }
+      .view iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; }
+      figcaption { margin-top: 6px; color: #4A443C; }
+    </style>
+  </body>
+</html>

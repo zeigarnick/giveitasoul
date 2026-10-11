@@ -1,0 +1,158 @@
+---
+// Dev only, at /dev/credit (registered for the dev server in astro.config.mjs): a playground for the hover on "created by Nick Sng". The real credit
+// styles load first; the sliders write a hover layer on top, with springs turned into CSS linear() easings.
+import Nav from './Nav.astro';
+import { SITE } from '../lib/site.js';
+import '../styles/type.css';
+import '../styles/credit.css';
+import './pg.css';
+const { name, handle } = SITE.creator;
+const X = 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Credit · giveitasoul dev</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hedvig+Letters+Serif:opsz@12..24&family=Onest:wght@400;500;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" />
+  </head>
+  <body class="pg">
+    <aside class="pg-side">
+      <Nav on="credit" />
+      <div class="pg-controls" id="controls"></div>
+      <div class="pg-out"><pre id="out"></pre><button id="copy">Copy</button></div>
+    </aside>
+    <main class="pg-stage">
+      <div class="pg-tools">
+        <label><input id="hold" type="checkbox" /> Hold hover</label>
+        <label><input id="loop" type="checkbox" /> Loop</label>
+      </div>
+      {[2, 1].map((z) => (
+        <>
+          <div style={`zoom: ${z}`}>
+            <a href="#" class="credit" data-credit onclick="return false">
+              <span class="credit-by"><span class="cb-a">created by</span><span class="cb-b">{handle}</span></span>
+              <span class="credit-name">{name}</span>
+              <svg class="credit-x" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d={X} /></svg>
+            </a>
+          </div>
+          <span class="pg-cap">{z === 2 ? '2× zoom' : 'actual size'}</span>
+        </>
+      ))}
+      <span class="pg-cap" id="timing"></span>
+    </main>
+
+    <style id="live" is:inline></style>
+
+    <script>
+      import { panel, springEasing, copyButton } from './panel.js';
+
+      const schema = [
+        { type: 'heading', label: 'Rest' },
+        { key: 'rBorder', label: 'Outline', type: 'range', min: 0, max: 0.5, step: 0.01, value: 0.2 },
+        { key: 'rFill', label: 'Fill', type: 'range', min: 0, max: 0.12, step: 0.005, value: 0 },
+        { key: 'xRest', label: '𝕏 opacity', type: 'range', min: 0.2, max: 1, step: 0.05, value: 0.55 },
+        { type: 'heading', label: 'Hover' },
+        { key: 'hBorder', label: 'Outline', type: 'range', min: 0, max: 1, step: 0.02, value: 1 },
+        { key: 'hFill', label: 'Fill', type: 'range', min: 0, max: 0.15, step: 0.005, value: 0.04 },
+        { key: 'lift', label: 'Lift', type: 'range', min: 0, max: 6, step: 0.5, value: 0, unit: 'px' },
+        { key: 'scale', label: 'Scale', type: 'range', min: 1, max: 1.08, step: 0.005, value: 1 },
+        { key: 'shadow', label: 'Shadow', type: 'range', min: 0, max: 0.3, step: 0.01, value: 0 },
+        { key: 'shadowBlur', label: 'Shadow blur', type: 'range', min: 4, max: 32, value: 16, unit: 'px' },
+        { key: 'nameColor', label: 'Name colour', type: 'color', value: '#141210' },
+        { key: 'nameShift', label: 'Name shift', type: 'range', min: -4, max: 4, step: 0.5, value: 0, unit: 'px' },
+        { key: 'xRot', label: '𝕏 rotate', type: 'range', min: -180, max: 180, step: 5, value: 0, unit: '°' },
+        { key: 'xScale', label: '𝕏 scale', type: 'range', min: 0.8, max: 1.5, step: 0.05, value: 1 },
+        { key: 'swap', label: `Slide in the handle in place of "created by"`, type: 'check', value: false },
+        { key: 'press', label: 'Press scale', type: 'range', min: 0.9, max: 1, step: 0.005, value: 1 },
+        { type: 'heading', label: 'Motion' },
+        { key: 'ease', label: 'Easing', type: 'select', options: ['spring', 'bezier'], value: 'bezier' },
+        { key: 'resp', label: 'Spring response', type: 'range', min: 0.15, max: 0.8, step: 0.01, value: 0.35, unit: 's' },
+        { key: 'damp', label: 'Spring damping', type: 'range', min: 0.4, max: 1, step: 0.01, value: 0.8 },
+        { key: 'dur', label: 'Bezier duration', type: 'range', min: 80, max: 800, step: 10, value: 160, unit: 'ms' },
+        { key: 'x1', label: 'Bezier x1', type: 'range', min: 0, max: 1, step: 0.01, value: 0.25 },
+        { key: 'y1', label: 'Bezier y1', type: 'range', min: -0.5, max: 2, step: 0.01, value: 0.1 },
+        { key: 'x2', label: 'Bezier x2', type: 'range', min: 0, max: 1, step: 0.01, value: 0.25 },
+        { key: 'y2', label: 'Bezier y2', type: 'range', min: -0.5, max: 2, step: 0.01, value: 1 },
+        { key: 'exit', label: 'Exit speed', type: 'range', min: 0.3, max: 1, step: 0.05, value: 1, unit: '×' },
+        { key: 'stagger', label: 'Stagger', type: 'range', min: 0, max: 120, step: 5, value: 0, unit: 'ms' }
+      ];
+      const presets = {
+        Current: {},
+        'Soft lift': { rBorder: 0.18, hBorder: 0.3, hFill: 0.035, lift: 2, shadow: 0.12, shadowBlur: 18, xRest: 0.5, ease: 'spring', resp: 0.38, damp: 0.78, exit: 0.6, press: 0.97 },
+        'Ink fill': { hBorder: 1, hFill: 0.08, nameColor: '#141210', xScale: 1.15, ease: 'spring', resp: 0.3, damp: 0.85, exit: 0.6, press: 0.96 },
+        'Handle reveal': { swap: true, hBorder: 0.5, hFill: 0.04, xRot: 0, ease: 'spring', resp: 0.42, damp: 0.82, exit: 0.6, stagger: 30, press: 0.97 },
+        Playful: { lift: 2.5, scale: 1.03, shadow: 0.14, nameColor: '#D22E1E', xRot: -12, xScale: 1.2, ease: 'spring', resp: 0.4, damp: 0.6, exit: 0.6, stagger: 40, press: 0.95 }
+      };
+
+      const live = document.getElementById('live'), credits = [...document.querySelectorAll('[data-credit]')];
+      let S = null, text = '';
+
+      function timing(scale = 1) {
+        if (S.ease === 'spring') { const s = springEasing(S.resp, S.damp); return { ms: Math.round(s.ms * scale), fn: s.easing }; }
+        return { ms: Math.round(S.dur * scale), fn: `cubic-bezier(${S.x1}, ${S.y1}, ${S.x2}, ${S.y2})` };
+      }
+      function build() {
+        const inT = timing(1), outT = timing(S.exit);
+        // the timings are defined once on .credit (its children inherit them) and referenced by name
+        const tr = (props, t, delay = 0) => props.map((p) => `${p} var(--${t.name}) var(--${t.name}-ease)${delay ? ' ' + delay + 'ms' : ''}`).join(', ');
+        inT.name = 'in'; outT.name = 'out';
+        const box = ['transform', 'background-color', 'border-color', 'box-shadow'];
+        const hov = '.credit:hover, .credit.is-hover';
+        const shadow = S.shadow ? `0 ${Math.round(S.shadowBlur / 3)}px ${S.shadowBlur}px -${Math.round(S.shadowBlur / 3)}px rgba(20,18,16,${S.shadow})` : 'none';
+        const lift = S.lift ? `translateY(-${S.lift}px)` : '';
+        const sc = S.scale !== 1 ? `scale(${S.scale})` : '';
+        const hT = [lift, sc].filter(Boolean).join(' ') || 'none';
+        const x = [S.xRot ? `rotate(${S.xRot}deg)` : '', S.xScale !== 1 ? `scale(${S.xScale})` : ''].filter(Boolean).join(' ') || 'none';
+        let css = `/* credit.css — rest (leaving the hover uses the exit timing) */
+.credit {
+  --in: ${inT.ms}ms; --in-ease: ${inT.fn};
+  --out: ${outT.ms}ms; --out-ease: ${outT.fn};
+  border-color: rgba(20,18,16,${S.rBorder}); background: rgba(20,18,16,${S.rFill}); box-shadow: none; transform: none; transition: ${tr(box, outT)}; }
+.credit-x { opacity: ${S.xRest}; transform: none; transition: ${tr(['opacity', 'transform'], outT)}; }
+.credit-name { transition: ${tr(['color', 'transform'], outT)}; }
+
+/* hover (entering uses the enter timing) */
+${hov} { border-color: rgba(20,18,16,${S.hBorder}); background: rgba(20,18,16,${S.hFill}); box-shadow: ${shadow}; transform: ${hT}; transition: ${tr(box, inT)}; }
+.credit:hover .credit-x, .credit.is-hover .credit-x { opacity: 1; transform: ${x}; transition: ${tr(['opacity', 'transform'], inT, S.stagger)}; }
+.credit:hover .credit-name, .credit.is-hover .credit-name { color: ${S.nameColor}; transform: ${S.nameShift ? `translateX(${S.nameShift}px)` : 'none'}; transition: ${tr(['color', 'transform'], inT, Math.round(S.stagger / 2))}; }
+`;
+        if (S.press !== 1) css += `.credit:active { transform: ${hT === 'none' ? '' : hT + ' '}scale(${(S.press * S.scale).toFixed(3)}); transition-duration: 90ms; }\n`;
+        css += S.swap
+          ? `
+/* "created by" slides up and out as the handle slides up in (markup: .credit-by holds .cb-a and .cb-b) */
+.credit-by { display: inline-grid; overflow: hidden; }
+.cb-a, .cb-b { grid-area: 1 / 1; transition: ${tr(['transform', 'opacity'], outT)}; }
+.cb-b { transform: translateY(100%); opacity: 0; text-transform: none; letter-spacing: 0; }
+.credit:hover .cb-a, .credit.is-hover .cb-a { transform: translateY(-100%); opacity: 0; transition: ${tr(['transform', 'opacity'], inT)}; }
+.credit:hover .cb-b, .credit.is-hover .cb-b { transform: none; opacity: 1; transition: ${tr(['transform', 'opacity'], inT, S.stagger)}; }
+`
+          : `\n.cb-b { display: none; }\n`;
+        css += `
+@media (prefers-reduced-motion: reduce) {
+  .credit, .credit-x, .credit-name, .cb-a, .cb-b { transition-duration: 1ms; }
+  ${hov} { transform: none; }
+}`;
+        document.getElementById('timing').textContent = `enter ${inT.ms}ms · exit ${outT.ms}ms · ${S.ease}`;
+        return css;
+      }
+
+      panel(document.getElementById('controls'), {
+        tool: 'credit', schema, presets,
+        onChange: (state) => { S = state; text = build(); live.textContent = text; document.getElementById('out').textContent = text; }
+      });
+      copyButton(document.getElementById('copy'), () => text);
+
+      const hold = document.getElementById('hold');
+      const setHover = (on) => credits.forEach((c) => c.classList.toggle('is-hover', on));
+      hold.addEventListener('change', () => setHover(hold.checked));
+      let loopT = 0;
+      document.getElementById('loop').addEventListener('change', (e) => {
+        clearInterval(loopT);
+        if (e.target.checked) { let on = false; loopT = setInterval(() => { on = !on; setHover(on); }, 1100); }
+        else setHover(hold.checked);
+      });
+    </script>
+  </body>
+</html>

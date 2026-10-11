@@ -1,0 +1,8 @@
+---
+// Dev only: links between the dev tools.
+const { on } = Astro.props;
+const TOOLS = [['viewports', 'Viewports'], ['fonts', 'Fonts'], ['toggle', 'Toggle'], ['credit', 'Credit'], ['logo', 'Logo'], ['serif', 'Serif']];
+---
+<nav class="pg-nav">
+  {TOOLS.map(([t, label]) => <a href={`/dev/${t}`} class={t === on ? 'on' : ''}>{label}</a>)}
+</nav>
