@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
+import { wispSvg, LOGO_COLORS, SWOOSH, SWOOSH_STROKE } from './logo.js';
 
 const require = createRequire(import.meta.url);
 const font = (file) => readFileSync(require.resolve(file));
@@ -14,6 +15,7 @@ const loadFonts = () =>
     { name: 'Instrument Serif', data: font('@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff'), weight: 400, style: 'italic' },
     { name: 'Geist', data: font('@fontsource/geist-sans/files/geist-sans-latin-400-normal.woff'), weight: 400, style: 'normal' },
     { name: 'Geist', data: font('@fontsource/geist-sans/files/geist-sans-latin-500-normal.woff'), weight: 500, style: 'normal' },
+    { name: 'Gabarito', data: font('@fontsource/gabarito/files/gabarito-latin-700-normal.woff'), weight: 700, style: 'normal' },
     { name: 'Geist Mono', data: font('@fontsource/geist-mono/files/geist-mono-latin-400-normal.woff'), weight: 400, style: 'normal' },
   ]);
 
@@ -65,12 +67,29 @@ function cardFace(s, w, hgt, k, rotate, seed) {
   );
 }
 
-// the wordmark: "give", a grey "it" struck through with a red stroke, "asoul"
-const logo = () => h('div', { fontFamily: 'Instrument Serif', fontSize: 40, color: INK, letterSpacing: -1, alignItems: 'baseline' },
-  'give',
-  h('div', { position: 'relative', color: '#8A8174' }, 'it',
-    svgImg('<svg xmlns="http://www.w3.org/2000/svg" width="30" height="10" viewBox="0 0 30 10"><path d="M2 7 C 9 5, 18 6, 28 3" stroke="#D22E1E" stroke-width="3.5" stroke-linecap="round" fill="none"/></svg>', 30, 10, { position: 'absolute', left: -3, top: 19 })),
-  'asoul');
+// The logo, as on the site (see lib/logo.js): the soul wisp, then "give it a soul" in Gabarito with a grey "it"
+// crossed by the red swoosh. The page stretches the swoosh's 100×100 box over "it"; here that's worked out in pixels
+// (and tilted -11° about 50%, 70% of the box) so the stroke stays even.
+const LOGO_PX = 40, IT_W = 0.621 * LOGO_PX;
+function swooshSvg() {
+  const sx = IT_W / 100, sy = LOGO_PX / 100, dy = 0.02 * LOGO_PX;
+  const d = SWOOSH.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${(x * sx).toFixed(2)} ${(y * sy + dy).toFixed(2)}`);
+  const cx = IT_W / 2, cy = 0.7 * LOGO_PX + dy, pad = 16;
+  const w = IT_W + 2 * pad, hgt = LOGO_PX + pad;
+  return {
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${hgt}" viewBox="${-pad} 0 ${w} ${hgt}"><path d="${d}" transform="rotate(-11 ${cx} ${cy})" fill="none" stroke="${LOGO_COLORS.flame}" stroke-width="${SWOOSH_STROKE}" stroke-linecap="round"/></svg>`,
+    w, hgt, pad
+  };
+}
+const logo = () => {
+  const sw = swooshSvg();
+  return h('div', { alignItems: 'center', gap: 0.12 * LOGO_PX },
+    svgImg(wispSvg(LOGO_PX), LOGO_PX, LOGO_PX),
+    h('div', { fontFamily: 'Gabarito', fontWeight: 700, fontSize: LOGO_PX, lineHeight: 1, color: INK, letterSpacing: -0.015 * LOGO_PX, alignItems: 'baseline' },
+      'give',
+      h('div', { position: 'relative', color: LOGO_COLORS.it }, 'it', svgImg(sw.svg, sw.w, sw.hgt, { position: 'absolute', left: -sw.pad, top: 0 })),
+      'asoul'));
+};
 
 export function soulImage(s) {
   return h('div', { width: OG_W, height: OG_H, background: PAPER, padding: '64px 80px', justifyContent: 'space-between', alignItems: 'center' },

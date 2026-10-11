@@ -1,0 +1,7 @@
+/* the logo: the soul wisp, then "give it a soul" with a grey "it" crossed by a red swoosh (shapes in lib/logo.js).
+   Top bar of the landing page and of each soul page; the font size is set where it's used. */
+.logo { position: relative; display: flex; align-items: center; gap: 0.12em; font-family: Gabarito, Geist, system-ui, sans-serif; font-weight: 700; letter-spacing: -0.015em; line-height: 1; text-decoration: none; color: #141210; }
+.logo-wisp { flex: none; width: 1em; height: 1em; }
+.logo-word { display: inline-flex; align-items: baseline; }
+.logo-it { position: relative; color: #999999; }
+.logo-swoosh { position: absolute; left: 0; top: 0.02em; width: 100%; height: 1em; overflow: visible; color: #EC4E32; transform: rotate(-11deg); transform-origin: 50% 70%; pointer-events: none; }
