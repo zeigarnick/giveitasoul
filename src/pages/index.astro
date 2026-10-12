@@ -28,10 +28,10 @@ const jsonLd = [
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Hedvig+Letters+Serif:opsz@12..24&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Onest:wght@400;500;700&family=Gabarito:wght@700&family=Bodoni+Moda:ital,wght@1,700&family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Caveat:wght@700&family=Young+Serif&family=Space+Mono:wght@700&family=Nunito:wght@800&family=Unbounded:wght@700&family=Anton&family=Quicksand:wght@600&family=DM+Serif+Display&display=swap"
-    />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hedvig+Letters+Serif:opsz@12..24&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Onest:wght@400;500;700&family=Gabarito:wght@700&display=swap" />
+    <!-- The hero word "soul" swaps through these faces toward the pointer (config.js FACES). They only ever draw that one
+         word, so only its letters are fetched (text=soul: a few KB instead of whole fonts), without blocking the page. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@1,700&family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Caveat:wght@700&family=Young+Serif&family=Space+Mono:wght@700&family=Unbounded:wght@700&family=Anton&family=Quicksand:wght@600&family=DM+Serif+Display&text=soul&display=swap" media="print" onload="this.media='all'" />
   </head>
   <body>
     <main class="viewport">
