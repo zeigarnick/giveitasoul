@@ -39,9 +39,11 @@ const DESK = {
   fan: { Kmin: 0.42, Kmax: 1.05 }
 };
 const PHONE = {
-  phone: true, heroPad: 24, h1Lh: 1.02, credit: 'byline', tgW0: 77, tgW1: 112, tgFs: 13, tgGap: 6, tgRight: 20, counterW: 72,
+  phone: true, heroPad: 24, h1Lh: 1.02, credit: 'byline', tgW0: 72, tgW1: 106, tgFs: 13, tgGap: 6, tgRight: 20, counterW: 72,
   hint: '', dragK: 1.04, flick: 1, spin: { response: 0.55, damping: 0.95 }, shaderScale: 2,
-  fan: { Kmin: 0.7, Kmax: 1.3 }
+  // phones: no prev/next row (you swipe), and cards a little smaller than the screen allows, for breathing room
+  noBar: true, sideRoom: 44,
+  fan: { Kmin: 0.7, Kmax: 1.15 }
 };
 export const TIERS = {
   // big monitors (1440p and up)
@@ -72,8 +74,6 @@ export function tierFor(w, h) {
   return 'md';
 }
 
-// The card's height at the centre of the wheel is CARD_H · K · FEEL.scale; its centre sits FEEL.lift · K above PYb.
-// heroH is the hero block's measured height (an estimate until it has been measured).
 // The open card's window sits below the top bar (`top`, which leaves room for the pull handle) and above the window's
 // bottom edge. On phones the card art inside it shrinks with the window's height so the whole window fits.
 const SHEET_BOTTOM = 16;
@@ -86,15 +86,19 @@ function sheetFor(T, h) {
   return S;
 }
 
+// The card's height at the centre of the wheel is CARD_H · K · FEEL.scale; its centre sits FEEL.lift · K above PYb.
+// heroH is the hero block's measured height (an estimate until it has been measured).
 export function layoutFor(w, h, heroH) {
   const tier = tierFor(w, h), T = TIERS[tier], f = T.fan, sp = T.sp;
-  const hH = heroH || T.h1 * T.h1Lh * (T.phone ? 2 : 1) + 14 + T.sub * 1.4;
-  const barTop = h - T.bottom - 44;
+  // (phones show no subtitle under the headline)
+  const hH = heroH || (T.phone ? T.h1 * T.h1Lh * 2 : T.h1 * T.h1Lh + 14 + T.sub * 1.4);
+  // the prev/next row's top (44px buttons), or the window's bottom inset when there's no row
+  const barTop = T.noBar ? h - T.bottom : h - T.bottom - 44;
   // the room between the top bar and the bottom bar, less the fixed spacing
   const free = barTop - T.navH - sp.top - hH - sp.fan - sp.bar;
   const perK = CARD_H * FEEL.scale;
   // phones: keep the centre card clear of the window's sides
-  const wCap = T.phone ? (w - 2 * T.sheet.MARGIN - 30) / (CARD_W * FEEL.scale) : Infinity;
+  const wCap = T.phone ? (w - 2 * T.sideRoom) / (CARD_W * FEEL.scale) : Infinity;
   const K = Math.max(f.Kmin, Math.min(f.Kmax, wCap, free / perK));
   const extra = Math.max(0, free - perK * K);
   const heroTop = Math.round(T.navH + sp.top + extra * 0.4);

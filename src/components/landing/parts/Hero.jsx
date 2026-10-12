@@ -17,7 +17,8 @@ export function Hero({ engine, st, L }) {
         </span>
         <span>.</span>
       </h1>
-      <p style={{ fontSize: `${L.sub}px` }}>Spin through personalities. Tap one to meet it.</p>
+      {/* phones skip the subtitle: the headline and the cards say enough on a small screen */}
+      {!L.phone && <p style={{ fontSize: `${L.sub}px` }}>Spin through personalities. Tap one to meet it.</p>}
     </div>
   );
 }

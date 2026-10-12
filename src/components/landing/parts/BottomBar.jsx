@@ -8,6 +8,8 @@ const Chevron = ({ d }) => (
 // wheel it would freeze the spin and snap it to the nearest card, so quick clicks would cancel each other instead
 // of queuing up like the arrow keys do.
 export function BottomBar({ engine, st, counter, L }) {
+  // phones have no row: swiping the wheel does its job
+  if (L.noBar) return null;
   return (
     <div ref={engine.bind('bar')} className="bottombar" onPointerDown={(e) => e.stopPropagation()} style={{ bottom: `${L.bottom}px`, ...st.bar }}>
       <button type="button" aria-label="Previous soul" onClick={engine.prev} className="roundbtn"><Chevron d="M15 6l-6 6 6 6" /></button>
