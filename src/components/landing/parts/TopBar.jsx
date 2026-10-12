@@ -4,9 +4,10 @@ import '../../../styles/logo.css';
 
 // The logo, and who made it: a pill on the right on desktop, a byline under the logo on phones (the deck
 // toggle takes the right there).
-export function TopBar({ L }) {
+// It fades out while an open card's window is too tall to fit below it (frame.js).
+export function TopBar({ engine, st, L }) {
   return (
-    <nav className="topbar" style={{ padding: L.navPad }}>
+    <nav ref={engine.bind('nav')} className="topbar" style={{ padding: L.navPad, ...st.nav }}>
       <div className="topbar-brand">
         <a href="#" aria-label="giveitasoul home" className="logo" style={{ fontSize: L.logo + 'px' }}>
           <svg className="logo-wisp" viewBox="0 0 32 32" aria-hidden="true">

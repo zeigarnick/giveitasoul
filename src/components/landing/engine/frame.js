@@ -180,8 +180,11 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
   const textH = e.detH || 360;
   const W1 = row ? PAD + cardW + GAP + Lay.sheet.TEXTW + PAD : Lay.W - 2 * Lay.sheet.MARGIN;
   const innerH = row ? Math.max(cardH, textH) : cardH + GAP + textH;
-  // the window stays inside the screen; one taller than the screen centres on it
-  const H1 = innerH + PAD * 2, cx1 = Lay.W / 2, cy1 = H1 + 16 > Lay.H ? Lay.H / 2 : Math.max(H1 / 2 + 8, Math.min(Lay.H - H1 / 2 - 8, Lay.sheet.cy));
+  // the window sits between the top bar and the bottom edge (centred there on phones); one too tall for that centres
+  // on the screen and the top bar fades out under it, so the two never overlap
+  const H1 = innerH + PAD * 2, cx1 = Lay.W / 2, top0 = Lay.sheet.top, room = Lay.H - top0 - Lay.sheet.bottom;
+  e.sheetCoversNav = H1 > room;
+  const cy1 = e.sheetCoversNav ? Lay.H / 2 : row ? Math.max(top0 + H1 / 2, Math.min(Lay.H - Lay.sheet.bottom - H1 / 2, Lay.sheet.cy)) : top0 + room / 2;
   // where the card art and the text land inside the open window
   const artX1 = row ? PAD : (W1 - cardW) / 2, artY1 = row ? PAD + (innerH - cardH) / 2 : PAD;
   const textX = row ? PAD + cardW + GAP : PAD, textY = row ? PAD + (innerH - textH) / 2 : PAD + cardH + GAP;
@@ -284,7 +287,9 @@ function deckStyles(e, st) {
   const p = e.p, deck = e.deck, open = e.open;
   const other = deck === 'mbti' ? 'ennea' : 'mbti';
   const W0 = e.L.tgW0, W1 = e.L.tgW1, t = p.tog || 0;
-  st.toggle = { opacity: (1 - 0.6 * clamp01(p.rest || 0)).toFixed(3), pointerEvents: open ? 'none' : 'auto' };
+  const navFade = e.sheetCoversNav ? clamp01(p.rest || 0) : 0;
+  st.toggle = { opacity: ((1 - 0.6 * clamp01(p.rest || 0)) * (1 - navFade)).toFixed(3), pointerEvents: open ? 'none' : 'auto' };
+  st.nav = { opacity: (1 - navFade).toFixed(3), pointerEvents: navFade > 0.5 ? 'none' : 'auto' };
   st.thumb = { left: (4 + W0 * t).toFixed(1) + 'px', width: (W0 + (W1 - W0) * t).toFixed(1) + 'px' };
   // the label under the thumb is light and bold; the colours crossfade as the thumb slides across
   st.opt0 = toggleLabel(1 - t);

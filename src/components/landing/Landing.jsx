@@ -23,7 +23,7 @@ export default function Landing() {
       onPointerLeave={engine.onPointerLeave} onWheel={engine.onWheel} onKeyDown={engine.onKeyDown}
       style={{ '--W': `${L.W}px`, '--H': `${L.H}px` }}
     >
-      <TopBar L={L} />
+      <TopBar engine={engine} st={f.st} L={L} />
       <Hero engine={engine} st={f.st} L={L} />
       <DeckToggle engine={engine} st={f.st} deck={engine.deck} L={L} />
       <DeckFlip engine={engine} st={f.st} from={f.from} to={f.to} hint={f.plHint} L={L} />

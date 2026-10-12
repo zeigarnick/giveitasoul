@@ -56,11 +56,11 @@ export const TIERS = {
   // short landscape windows (phones on their side)
   short: { ...DESK, navH: 56, sp: { top: 8, fan: 48, bar: 8 }, h1: 32, sub: 14, navPad: '12px 24px', logo: 22, tgTop: 10, bottom: 12,
     tgW0: 89, tgW1: 126, tgFs: 14, hint: '', counterW: 72, sheet: { row: true, PAD: 16, GAP: 24, TEXTW: 380, ART: 0.72 }, nameFs: 28, nameLh: 32 },
-  phone: { ...PHONE, navH: 88, sp: { top: 24, fan: 48, bar: 32 }, h1: 40, sub: 15, navPad: '18px 20px', logo: 24, tgTop: 10, bottom: 28,
-    sheet: { row: false, PAD: 20, GAP: 20, ART: 0.8, MARGIN: 20 }, nameFs: 34, nameLh: 38 },
+  phone: { ...PHONE, navH: 88, sp: { top: 24, fan: 72, bar: 32 }, h1: 40, sub: 15, navPad: '18px 20px', logo: 24, tgTop: 20.5, bottom: 28,
+    sheet: { row: false, PAD: 20, GAP: 20, ART: 0.8, MARGIN: 20, textH: 370 }, nameFs: 34, nameLh: 38 },
   // small or short phones (iPhone SE, 360px Androids)
-  phoneSm: { ...PHONE, navH: 80, sp: { top: 16, fan: 40, bar: 24 }, h1: 34, sub: 14, navPad: '16px 16px', logo: 22, tgTop: 7, bottom: 20, tgRight: 16, tgW0: 71, tgW1: 104, tgFs: 12.5,
-    sheet: { row: false, PAD: 16, GAP: 16, ART: 0.6, MARGIN: 16 }, nameFs: 30, nameLh: 34 }
+  phoneSm: { ...PHONE, fan: { ...PHONE.fan, Kmax: 1.05 }, navH: 80, sp: { top: 16, fan: 56, bar: 24 }, h1: 34, sub: 14, navPad: '16px 16px', logo: 22, tgTop: 17.5, bottom: 20, tgRight: 16, tgW0: 64, tgW1: 96, tgFs: 12,
+    sheet: { row: false, PAD: 16, GAP: 16, ART: 0.6, MARGIN: 16, textH: 360 }, nameFs: 30, nameLh: 34 }
 };
 export const PHONE_MAX = 700;
 
@@ -74,6 +74,18 @@ export function tierFor(w, h) {
 
 // The card's height at the centre of the wheel is CARD_H · K · FEEL.scale; its centre sits FEEL.lift · K above PYb.
 // heroH is the hero block's measured height (an estimate until it has been measured).
+// The open card's window sits below the top bar (`top`, which leaves room for the pull handle) and above the window's
+// bottom edge. On phones the card art inside it shrinks with the window's height so the whole window fits.
+const SHEET_BOTTOM = 16;
+function sheetFor(T, h) {
+  const S = { ...T.sheet, cy: Math.round(h * 0.52), top: T.navH, bottom: SHEET_BOTTOM };
+  if (!S.row) {
+    const room = h - S.top - S.bottom - 2 * S.PAD - S.GAP - S.textH;
+    S.ART = Math.max(0.42, Math.min(T.sheet.ART, Math.floor((room / CARD_H) * 100) / 100));
+  }
+  return S;
+}
+
 export function layoutFor(w, h, heroH) {
   const tier = tierFor(w, h), T = TIERS[tier], f = T.fan, sp = T.sp;
   const hH = heroH || T.h1 * T.h1Lh * (T.phone ? 2 : 1) + 14 + T.sub * 1.4;
@@ -93,7 +105,7 @@ export function layoutFor(w, h, heroH) {
     PYb: cy + FEEL.lift * K,
     // the deck name sits in the space the sinking fan leaves; the pointer counts as over the cards below nearY
     label: Math.round(cy - 118), nearY: Math.round(cardTop - 6),
-    sheet: { ...T.sheet, cy: Math.round(h * 0.52) }
+    sheet: sheetFor(T, h)
   };
 }
 
