@@ -1,0 +1,14 @@
+---
+// The logo as a link home, for the Astro pages (the landing's top bar draws the same thing in TopBar.jsx): the soul
+// wisp, then "giveitasoul" with the grey "it" crossed by the swoosh. Shapes in lib/logo.js, styles in styles/logo.css;
+// the page sets its font size.
+import { WISP, LOGO_COLORS as C, SWOOSH, SWOOSH_STROKE } from '../lib/logo.js';
+import '../styles/logo.css';
+---
+<a href="/" class="logo" aria-label="giveitasoul home">
+  <svg class="logo-wisp" viewBox="0 0 32 32" aria-hidden="true">
+    <path d={WISP.flame} fill={C.flame} /><path d={WISP.glow} fill={C.glow} />
+    {WISP.eyes.map(([x, y]) => <circle cx={x} cy={y} r={WISP.eyeR} fill={C.ink} />)}
+  </svg>
+  <span class="logo-word">give<span class="logo-it">it<svg class="logo-swoosh" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={SWOOSH} fill="none" stroke="currentColor" stroke-width={SWOOSH_STROKE} stroke-linecap="round" vector-effect="non-scaling-stroke" /></svg></span>asoul</span>
+</a>

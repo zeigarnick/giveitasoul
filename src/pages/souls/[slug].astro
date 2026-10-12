@@ -5,9 +5,8 @@ import { MBTI, ENNEAGRAM } from '../../data/souls.js';
 import { SOUL_FILES, soulSlug, soulPrompt } from '../../lib/souls.js';
 import Seo from '../../components/seo/Seo.astro';
 import { SITE, absolute, typeLabel, creatorLd } from '../../lib/site.js';
-import { WISP, LOGO_COLORS as C, SWOOSH, SWOOSH_STROKE } from '../../lib/logo.js';
+import Logo from '../../components/Logo.astro';
 import '../../styles/credit.css';
-import '../../styles/logo.css';
 import '../../styles/type.css';
 
 export function getStaticPaths() {
@@ -77,13 +76,7 @@ const jsonLd = [
   </head>
   <body style={`--soul-bg: ${soul.bg}; --soul-ac: ${soul.ac};`}>
     <header class="bar">
-      <a href="/" class="logo" aria-label="giveitasoul home">
-        <svg class="logo-wisp" viewBox="0 0 32 32" aria-hidden="true">
-          <path d={WISP.flame} fill={C.flame} /><path d={WISP.glow} fill={C.glow} />
-          {WISP.eyes.map(([x, y]) => <circle cx={x} cy={y} r={WISP.eyeR} fill={C.ink} />)}
-        </svg>
-        <span class="logo-word">give<span class="logo-it">it<svg class="logo-swoosh" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={SWOOSH} fill="none" stroke="currentColor" stroke-width={SWOOSH_STROKE} stroke-linecap="round" vector-effect="non-scaling-stroke" /></svg></span>asoul</span>
-      </a>
+      <Logo />
       <a href="/" class="bar-link">All souls</a>
     </header>
 
@@ -177,7 +170,7 @@ const jsonLd = [
 
 <style>
   .bar { max-width: 1120px; margin: 0 auto; padding: 28px 24px; display: flex; justify-content: space-between; align-items: center; }
-  .logo { font-size: 28px; }
+  .bar :global(.logo) { font-size: 28px; }
   .bar-link { font-size: 15px; text-decoration: none; padding: 10px 0; }
   .bar-link:hover { color: #4A443C; }
 
@@ -231,7 +224,7 @@ const jsonLd = [
 
   @media (max-width: 760px) {
     .bar { padding: 18px 20px; }
-    .logo { font-size: 24px; }
+    .bar :global(.logo) { font-size: 24px; }
     .page { padding: 0 20px 64px; }
     .intro { grid-template-columns: 1fr; gap: 32px; padding: 16px 0 48px; justify-items: center; }
     .card-wrap { width: 232px; height: 324px; }

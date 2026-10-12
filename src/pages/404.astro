@@ -1,0 +1,63 @@
+---
+// Shown for any address that isn't a page. Built as 404.html, which also makes Cloudflare Pages answer unknown paths
+// with a real 404 instead of falling back to the homepage.
+import Logo from '../components/Logo.astro';
+import { SITE } from '../lib/site.js';
+import { WISP, LOGO_COLORS as C } from '../lib/logo.js';
+import '../styles/type.css';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Page not found · {SITE.name}</title>
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#F4F0E8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hedvig+Letters+Serif:opsz@12..24&family=Onest:wght@400;500&family=Gabarito:wght@700&display=swap" />
+  </head>
+  <body>
+    <header class="bar">
+      <Logo />
+    </header>
+    <main class="lost">
+      <!-- the wisp, drifting a little to one side as if it's looking for something -->
+      <svg class="wisp" viewBox="0 0 32 32" aria-hidden="true">
+        <path d={WISP.flame} fill={C.flame} /><path d={WISP.glow} fill={C.glow} />
+        {WISP.eyes.map(([x, y]) => <circle cx={x - 1.2} cy={y - 0.6} r={WISP.eyeR} fill={C.ink} />)}
+      </svg>
+      <p class="code">404</p>
+      <h1>This soul wandered off.</h1>
+      <p class="say">There's nothing at this address. The other souls are right where you left them.</p>
+      <a href="/" class="home">Back to all souls</a>
+    </main>
+  </body>
+</html>
+
+<style>
+  :global(html), :global(body) { margin: 0; min-height: 100%; background: #F4F0E8; color: #141210; }
+  body { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; font-family: Onest, Geist, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .bar { padding: 28px 56px; }
+  .bar :global(.logo) { font-size: 28px; }
+  .lost { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px 24px 96px; }
+  .wisp { width: 96px; height: 96px; margin-bottom: 24px; transform-origin: 50% 100%; animation: drift 4.8s ease-in-out infinite; }
+  @keyframes drift { 0%, 100% { transform: rotate(-4deg) translateX(-3px); } 50% { transform: rotate(4deg) translateX(3px); } }
+  .code { margin: 0 0 10px; font-size: 14px; font-weight: 500; letter-spacing: 0.08em; color: #8A8174; }
+  h1 { margin: 0; font-family: var(--serif); font-weight: var(--serif-w); font-variation-settings: var(--serif-axes); font-size: 56px; line-height: 1.05; letter-spacing: -0.03em; text-wrap: balance; }
+  .say { margin: 16px 0 0; max-width: 34ch; font-size: 18px; line-height: 1.45; letter-spacing: -0.01em; color: #6B6358; text-wrap: balance; }
+  .home { margin-top: 32px; height: 48px; padding: 0 22px; display: inline-flex; align-items: center; border-radius: 99px; background: #141210; color: #F4F0E8; text-decoration: none; font-size: 16px; font-weight: 500; transition: transform 0.2s cubic-bezier(0.3, 1.4, 0.5, 1); }
+  .home:hover { color: #F4F0E8; }
+  .home:active { transform: scale(0.96); }
+  .home:focus-visible { outline: 2px solid #141210; outline-offset: 3px; }
+  @media (max-width: 700px) {
+    .bar { padding: 18px 20px; }
+    .bar :global(.logo) { font-size: 24px; }
+    .wisp { width: 80px; height: 80px; }
+    h1 { font-size: 40px; }
+    .say { font-size: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .wisp { animation: none; } .home { transition: none; } }
+</style>
