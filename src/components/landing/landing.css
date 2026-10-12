@@ -49,13 +49,15 @@
 .fancard-z { position: relative; width: 232px; height: 324px; }
 /* the deeper shadow a card gets near the centre, on its own layer so fading it doesn't repaint the card */
 .fancard-shade { position: absolute; inset: 0; z-index: -1; border-radius: 20px; pointer-events: none; will-change: opacity; }
+/* side cards' dimming: a black layer whose opacity the engine sets (cheaper than a brightness filter) */
+.fancard-dim { position: absolute; inset: 0; border-radius: 20px; background: #000; pointer-events: none; opacity: 0; }
 
 /* the highlight that follows the pointer over the centre card: a pre-drawn spot moved by transform */
 .glare { position: absolute; inset: 0; border-radius: 20px; overflow: hidden; pointer-events: none; }
 .glare-spot { position: absolute; left: 0; top: 0; width: 360px; height: 360px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.25) 35%, rgba(255,255,255,0) 70%); mix-blend-mode: overlay; opacity: 0; }
 
 /* open card: scrim, pill and details window */
-.scrim { position: absolute; left: 0; top: 0; width: var(--W); height: var(--H); z-index: 140; }
+.scrim { position: absolute; left: 0; top: 0; width: var(--W); height: var(--H); z-index: 140; will-change: opacity; }
 .pill { position: absolute; left: 0; top: 0; z-index: 160; pointer-events: none; }
 .sheet { position: absolute; left: 0; top: 0; z-index: 150; overflow: hidden; }
 .sheet-art { position: absolute; transform-origin: 0 0; overflow: hidden; }

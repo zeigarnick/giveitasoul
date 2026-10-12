@@ -85,13 +85,15 @@ function fanStyles(e, { open, restE, op01, sheetOn }, st) {
       transform: 'translate(' + (crisp ? Math.round(bx) + 'px, ' + Math.round(by) : bx.toFixed(1) + 'px, ' + by.toFixed(1)) + 'px) rotate(' + (L(wa, oa) + Math.sign(d) * slc * 10 + Math.max(-6, Math.min(6, cst.v * 2.2)) * Math.sign(d)).toFixed(2) + 'deg)' + (flat ? '' : ' perspective(1400px) rotateY(' + ry.toFixed(2) + 'deg)' + turn) + ' scale(' + (L(ws, os) * (1 - 0.08 * slc) / Kc).toFixed(4) + ')',
       opacity: op.toFixed(3),
       zIndex: isActive && op01 > 0.01 ? 120 : 100 - rank[i],
-      filter: bright > 0.9995 ? 'none' : 'brightness(' + bright.toFixed(3) + ')',
       boxShadow: cardShadow(0, cfg, Kc),
       willChange: crisp ? 'auto' : 'transform'
     };
     // the deeper shadow near the centre is a fixed shadow on its own layer faded in, so only opacity changes
     st['shade' + i] = { opacity: near.toFixed(3), boxShadow: nearShadow(cfg) };
     st['glare' + i] = isActive ? glare(p) : NO_GLARE;
+    // side cards dim through a black layer's opacity rather than a brightness() filter: the same darkening, but the
+    // card isn't repainted every frame of a spin
+    st['dim' + i] = { opacity: (1 - bright).toFixed(3) };
     // off the window, invisible, or under the full-strength scrim
     cardPause[i] = e.rm || op < 0.001 || op01 > 0.98 || x < -300 || x > Lay.W + 20 || y > Lay.H + 20;
     if (op > 0.01 && !(x < -300 || x > Lay.W + 20 || y > Lay.H + 20)) visible++;
@@ -227,8 +229,10 @@ function sheetStyles(e, { open, restE, sheetOn }, st) {
 
   const vis = sheetOn ? 'visible' : 'hidden', pe = open ? 'auto' : 'none';
   // frosted backdrop, with saturation lifted as it blurs so it reads richer, not greyer (Compositing: Backdrop Filters)
-  const blur = 'blur(' + (cfg.blur * clamp01(restE)).toFixed(2) + 'px) saturate(' + (1 + 0.4 * clamp01(restE)).toFixed(3) + ')';
-  st.scrim = { background: 'rgba(244,240,232,' + (cfg.tint * clamp01(restE)).toFixed(3) + ')', backdropFilter: blur, WebkitBackdropFilter: blur, pointerEvents: pe, visibility: vis };
+  // the backdrop is blurred once at full strength and faded in: animating the blur radius instead re-blurs the whole
+  // screen every frame, which is heavy on phones
+  const blur = 'blur(' + cfg.blur + 'px) saturate(1.4)';
+  st.scrim = { background: 'rgba(244,240,232,' + cfg.tint + ')', backdropFilter: blur, WebkitBackdropFilter: blur, opacity: clamp01(restE).toFixed(3), pointerEvents: pe, visibility: vis };
   st.sheet = {
     // While the text column is folded the window is exactly the card art, so its own background would only show as
     // a flickering light fringe through the art's anti-aliased edge. It fills in as soon as the window widens.

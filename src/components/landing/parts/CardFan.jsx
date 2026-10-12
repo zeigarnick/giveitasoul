@@ -15,6 +15,7 @@ export function CardFan({ engine, st, souls, L }) {
           <SoulCard s={s} />
         </button>
         <span className="glare"><span ref={engine.bind('glare' + i)} className="glare-spot" style={st['glare' + i]} /></span>
+        <span ref={engine.bind('dim' + i)} className="fancard-dim" style={st['dim' + i]} />
       </div>
     </div>
   ));
