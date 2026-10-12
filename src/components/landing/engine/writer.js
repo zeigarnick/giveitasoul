@@ -45,10 +45,11 @@ export function createWriter() {
         paused[i] = want;
         hold(svg, want, rm);
       });
-      // the open window's shader copies (its card, and the one on the flip side) draw only while the window shows
+      // the open window's card draws only while the window shows and the flip isn't covering it (the copy on the flip
+      // side runs itself: FlipFile)
       if (els.sheet) {
-        const on = f.st.sheet.visibility === 'visible';
-        els.sheet.querySelectorAll('canvas').forEach((cv) => { renderer().setDistance(cv, 0); renderer().setRunning(cv, on); });
+        const on = f.st.sheet.visibility === 'visible' && !els.sheet.classList.contains('is-flipping');
+        els.sheet.querySelectorAll('.sheet-art canvas').forEach((cv) => { renderer().setDistance(cv, 0); renderer().setRunning(cv, on); });
       }
       if (artPaused !== rm) {
         const svg = els.art && els.art.querySelector('svg');

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import SoulCard from '../SoulCard.jsx';
+import { renderer } from '../shaders/renderer.js';
 import { SOUL_FILES, soulSlug, soulPrompt } from '../../../lib/souls.js';
 
 // "Use this soul": the card in the open window turns over, growing across the window as it turns, and its back is
@@ -58,6 +59,14 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
 
   const cardW = 232 * ART, cardH = 324 * ART;
 
+  // The copy of the card on the flip's front draws its pattern only while you can see it (the flip turning, front
+  // face up); otherwise it would redraw, hidden, every frame a card is open.
+  const runFront = (on) => {
+    const cv = front.current && front.current.querySelector('canvas');
+    if (cv) { renderer().setDistance(cv, 0); renderer().setRunning(cv, on); }
+  };
+  useLayoutEffect(() => { runFront(false); }, [soul.name]);
+
   // write the flip's current state straight to the elements (no React render per frame)
   const apply = () => {
     const st = s.current, els = engine.els, p = st.p;
@@ -88,8 +97,12 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
     const backShows = Math.abs(((180 * p) % 360 + 360) % 360 - 180) < 90;
     backFace.current.style.visibility = backShows ? 'inherit' : 'hidden';
     frontFace.current.style.visibility = backShows ? 'hidden' : 'inherit';
+    runFront(on && !backShows);
     const a = clamp01(p / 0.45);
     if (els.sheet) els.sheet.classList.toggle('is-flipping', on);
+    // the window's own card hides under the flip: hold its pattern while it's covered
+    const artCv = els.art && els.art.querySelector('canvas');
+    if (artCv) renderer().setRunning(artCv, !on && engine.open);
     if (els.det) {
       if (on) { els.det.style.opacity = (1 - a).toFixed(3); els.det.style.filter = a > 0.01 ? `blur(${(5 * a).toFixed(2)}px)` : ''; }
       else { els.det.style.removeProperty('opacity'); els.det.style.removeProperty('filter'); }

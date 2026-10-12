@@ -2,8 +2,10 @@ import { VERTEX, PROGRAMS, paramsFor } from './programs.js';
 import { CARD_W, CARD_H } from '../config.js';
 
 // One WebGL context draws every shader card. Browsers cap how many WebGL contexts a page may hold, so instead of a
-// context per card, each visible card is drawn in turn into this shared canvas and copied into the card's own 2D
-// canvas (a GPU-to-GPU copy). Only the centre card and the open window animate; every other card holds the last frame
+// context per card, each visible card is drawn in turn into this shared canvas and handed to the card's own canvas.
+// Where the browser can (OffscreenCanvas with WebGL), the hand-over is zero-copy: the frame becomes an ImageBitmap
+// that the card's 'bitmaprenderer' canvas shows as is, still on the GPU. Otherwise it's copied with drawImage, which on
+// many phones reads the frame back from the GPU and was most of the page's work. Only the centre card and the open window animate; every other card holds the last frame
 // it drew. With nothing animating the loop stops.
 // Each soul has its own pattern clock, which only runs while one of its cards animates: a card coming to the centre
 // carries on from where it stopped instead of jumping ahead, and the wheel card and the open window (same soul, same
@@ -16,6 +18,10 @@ const clampScale = (s) => Math.max(1, Math.min(s, window.devicePixelRatio || 1))
 // the centre card and the open window redraw at up to 60fps (not 120 on ProMotion phones: the patterns move slowly,
 // and it halves their cost); every other card keeps its last frame
 const frameMs = (dist) => (dist < 0.5 ? 1000 / 60 - 2 : Infinity);
+// Cards that need a fresh still frame (just attached, resized, re-measured) queue for it instead of drawing at once:
+// each frame draws a few of the visible ones, nearest the centre first, and hidden ones wait until they show. On load
+// that spreads what was one long task of every card's shader across the frames of the entrance.
+const STILLS_PER_FRAME = 3;
 
 class ShaderRenderer {
   constructor() {
@@ -38,14 +44,18 @@ class ShaderRenderer {
   init() {
     // ?art=svg draws the SVG patterns instead, to compare performance on a device
     if (new URLSearchParams(location.search).get('art') === 'svg') { this.ok = false; return; }
-    const canvas = document.createElement('canvas');
-    this.size(canvas);
-    const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: false, powerPreference: 'low-power' });
+    const opts = { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: false, powerPreference: 'low-power' };
+    let canvas = null, gl = null;
+    if (typeof OffscreenCanvas === 'function' && typeof OffscreenCanvas.prototype.transferToImageBitmap === 'function') {
+      try { canvas = new OffscreenCanvas(1, 1); this.size(canvas); gl = canvas.getContext('webgl', opts); } catch (e) { gl = null; }
+    }
+    this.zeroCopy = !!gl;
+    if (!gl) { canvas = document.createElement('canvas'); this.size(canvas); gl = canvas.getContext('webgl', opts); }
     this.ok = !!gl;
     if (!gl) return;
     this.canvas = canvas; this.gl = gl;
     canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.lost = true; cancelAnimationFrame(this.raf); this.raf = 0; });
-    canvas.addEventListener('webglcontextrestored', () => { this.lost = false; this.programs = {}; this.setup(); this.targets.forEach((t) => this.draw(t, this.time(t))); this.wake(); });
+    canvas.addEventListener('webglcontextrestored', () => { this.lost = false; this.programs = {}; this.setup(); this.targets.forEach((t) => { t.dirty = true; }); this.wake(); });
     this.setup();
   }
 
@@ -82,12 +92,14 @@ class ShaderRenderer {
     this.scale = s;
     if (!this.gl) return;
     this.size(this.canvas);
-    this.targets.forEach((t) => { this.size(t.canvas); this.draw(t, this.time(t)); });
+    this.targets.forEach((t) => { this.size(t.canvas); t.dirty = true; });
+    this.wake();
   }
   // how far the card is from the centre (in cards) sets whether it animates
   setDistance(canvas, dist) {
     const t = this.targets.get(canvas);
     if (!t) return;
+    t.dist = dist;
     const every = frameMs(dist);
     if (every === t.every) return;
     t.every = every;
@@ -101,14 +113,16 @@ class ShaderRenderer {
   // phone's GPU for the swipe itself (on iPhones copying each card out of the shared canvas is costly too).
   setBusy(on) { this.busy = on; }
 
-  // A card's canvas joins; it draws straight away and keeps drawing while running.
+  // A card's canvas joins; it gets its first frame as soon as it shows (see STILLS_PER_FRAME) and keeps drawing
+  // while it runs.
   attach(canvas, name, soul) {
     if (!this.supported()) return;
     canvas.width = this.canvas.width; canvas.height = this.canvas.height;
     if (!this.clocks.has(soul.name)) this.clocks.set(soul.name, { v: 0 });
-    const t = { canvas, ctx: canvas.getContext('2d'), name, clk: this.clocks.get(soul.name), ac: hex(soul.ac), bg: hex(soul.bg), fg: hex(soul.fg), param: paramsFor(soul), nameTop: 254, running: true, every: frameMs(0), last: 0 };
+    // zero-copy where the card's canvas takes ImageBitmaps; a 2D copy otherwise
+    const bmp = this.zeroCopy ? canvas.getContext('bitmaprenderer') : null;
+    const t = { canvas, ctx: bmp || canvas.getContext('2d'), bmp: !!bmp, name, clk: this.clocks.get(soul.name), ac: hex(soul.ac), bg: hex(soul.bg), fg: hex(soul.fg), param: paramsFor(soul), nameTop: 254, running: true, every: frameMs(0), last: 0, dist: 0, dirty: true };
     this.targets.set(canvas, t);
-    this.draw(t, this.time(t));
     this.wake();
   }
   detach(canvas) { this.targets.delete(canvas); }
@@ -117,7 +131,8 @@ class ShaderRenderer {
     const t = this.targets.get(canvas);
     if (!t || !y || Math.abs(t.nameTop - y) < 0.5) return;
     t.nameTop = y;
-    this.draw(t, this.time(t));
+    t.dirty = true;
+    this.wake();
   }
   // the wheel pauses cards nobody can see, exactly as it pauses SVG patterns
   setRunning(canvas, on) {
@@ -147,11 +162,15 @@ class ShaderRenderer {
       const every = this.busy ? Math.max(t.every * 2 + 2, 1000 / 30 - 2) : t.every;
       if (ms - t.last >= every) { t.last = ms; this.draw(t, this.time(t)); }
     });
-    if (any && !this.rm.matches) this.wake(); else this.lastMs = 0;
+    // still frames still owed to cards on screen, nearest the centre first
+    const owed = [...this.targets.values()].filter((t) => t.dirty && t.running).sort((a, b) => a.dist - b.dist);
+    owed.slice(0, STILLS_PER_FRAME).forEach((t) => this.draw(t, this.time(t)));
+    if ((any && !this.rm.matches) || owed.length > STILLS_PER_FRAME) this.wake(); else this.lastMs = 0;
   }
 
   draw(t, time) {
     if (this.lost) return;
+    t.dirty = false;
     const gl = this.gl, P = this.program(t.name);
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -162,8 +181,8 @@ class ShaderRenderer {
     gl.uniform1f(P.time, time);
     gl.uniform3fv(P.ac, t.ac); gl.uniform3fv(P.bg, t.bg); gl.uniform3fv(P.fg, t.fg); gl.uniform3fv(P.param, t.param); gl.uniform2f(P.frame, (30 + t.nameTop) / 2, t.nameTop);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    t.ctx.clearRect(0, 0, t.canvas.width, t.canvas.height);
-    t.ctx.drawImage(this.canvas, 0, 0);
+    if (t.bmp) t.ctx.transferFromImageBitmap(this.canvas.transferToImageBitmap());
+    else { t.ctx.clearRect(0, 0, t.canvas.width, t.canvas.height); t.ctx.drawImage(this.canvas, 0, 0); }
   }
 }
 
