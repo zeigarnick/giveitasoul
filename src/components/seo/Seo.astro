@@ -1,7 +1,15 @@
 ---
 // Everything in a page's <head> that tells search engines, social previews and AI agents what the page is:
 // title, description, canonical address, Open Graph and Twitter tags, the markdown version and structured data.
+import { createHash } from 'node:crypto';
 import { SITE, absolute } from '../../lib/site.js';
+import ogSource from '../../lib/og.js?raw';
+import logoSource from '../../lib/logo.js?raw';
+import patternSource from '../landing/parts/patterns.jsx?raw';
+
+// Social sites cache a preview image by its URL, so the URL carries a hash of the code that draws it: change the
+// layout, the logo or a card pattern and every preview is fetched afresh.
+const ogVersion = createHash('sha256').update(ogSource).update(logoSource).update(patternSource).digest('hex').slice(0, 8);
 
 interface Props {
   title: string;
@@ -16,7 +24,7 @@ interface Props {
 }
 const { title, description, path, type = 'website', markdown, jsonLd, image, imageAlt } = Astro.props;
 const url = absolute(path);
-const imageUrl = absolute(image);
+const imageUrl = `${absolute(image)}?v=${ogVersion}`;
 ---
 <title>{title}</title>
 <meta name="description" content={description} />

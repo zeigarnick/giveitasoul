@@ -204,12 +204,18 @@ function Gears({ ac }) {
   );
 }
 
-// a 4×4 grid filling in reading order
+// a 4×4 grid filling in reading order. Each square rests at its opacity on the animation's first frame, so it reads the
+// same where the animation doesn't run (the social images).
+const gridOpacity = (i) => {
+  const p = ((i * 0.35) % 6) / 6;
+  const o = p < 0.15 ? 0.15 + 0.85 * (p / 0.15) : p < 0.7 ? 1 : 1 - 0.85 * ((p - 0.7) / 0.3);
+  return o.toFixed(2);
+};
 function Grid({ ac }) {
   return (
     <Svg fill="none">
       {Array.from({ length: 16 }, (_, i) => (
-        <rect key={i} x={40 + 40 * (i % 4)} y={28 + 40 * Math.floor(i / 4)} width="28" height="28" rx="7" fill={ac} fillOpacity="0.15">
+        <rect key={i} x={40 + 40 * (i % 4)} y={28 + 40 * Math.floor(i / 4)} width="28" height="28" rx="7" fill={ac} fillOpacity={gridOpacity(i)}>
           <animate attributeName="fill-opacity" values="0.15;1;1;0.15" keyTimes="0;0.15;0.7;1" {...GRID_WAVE} dur="6s" begin={'-' + (i * 35 / 100).toFixed(2) + 's'} repeatCount="indefinite" />
         </rect>
       ))}
