@@ -71,14 +71,18 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
   const apply = () => {
     const st = s.current, els = engine.els, p = st.p;
     if (!panel.current || !st.from) return;
-    const g = smooth((p - 0.25) / 0.75), f = st.from, t = st.to;
-    const w = lerp(f.w, t.w, g), h = lerp(f.h, t.h, g);
+    // it finishes growing as it finishes turning, so it meets the window's edges exactly, not over the spring's tail
+    // it grows to fill the window edge to edge (its back becomes the window), measured each frame so it meets the
+    // window's edges even when the window is still settling open
+    if (els.sheet) st.to = { x: 0, y: 0, w: els.sheet.offsetWidth, h: els.sheet.offsetHeight };
+    const g = smooth((p - 0.25) / 0.71), f = st.from, t = st.to;
+    const w = lerp(f.w, t.w, g), h = lerp(f.h, t.h, g), x = lerp(f.x, t.x, g), y = lerp(f.y, t.y, g);
     const on = p > 0.001;
     Object.assign(panel.current.style, {
       // 'inherit', never 'visible': a child set to visible shows even inside a hidden parent, so the flip (and its
       // copy of the card) would stay on screen after flipping home or while the window closes
       visibility: on ? 'inherit' : 'hidden',
-      left: lerp(f.x, t.x, g) + 'px', top: lerp(f.y, t.y, g) + 'px', width: w + 'px', height: h + 'px'
+      left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px'
     });
     // the turn finishes just inside each end of the spring, so its slow settling tail (and any overshoot) is spent
     // flat: the flip drops its 3D transforms there, since a face left in a 3D context, even one turned a whole 180°
@@ -88,10 +92,17 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
     panel.current.classList.toggle('is-flat', flat);
     rotor.current.style.transform = flat ? 'none' : `rotateY(${(180 * turn).toFixed(2)}deg)`;
     backFace.current.style.transform = turn === 1 ? 'none' : '';
-    front.current.style.left = (row ? 0 : (w - cardW) / 2) + 'px';
+    // the card on the front stays where the window's card sits while the flip grows around it (centred on phones)
+    Object.assign(front.current.style, { left: (row ? f.x - x : (w - cardW) / 2) + 'px', top: (f.y - y) + 'px' });
     // the back's content is laid out once at the final size and only revealed as the card grows, so its text never
     // re-wraps mid-flip; it fades in once the card is nearly full size
     Object.assign(backInner.current.style, { width: t.w + 'px', height: t.h + 'px', left: (row ? 0 : (w - t.w) / 2) + 'px' });
+    // it reads as a card while it turns and loses its own corners and shadow as it lands, where the window's rounded
+    // edge (which clips it) takes over
+    const e = 1 - g;
+    backFace.current.style.borderRadius = (22 * e).toFixed(1) + 'px';
+    backFace.current.style.boxShadow = e < 0.005 ? 'none'
+      : `inset 0 0 0 1px rgba(20,18,16,${(0.08 * e).toFixed(3)}), 0 18px 40px -22px rgba(20,18,16,${(0.35 * e).toFixed(3)})`;
     const b = clamp01((p - 0.72) / 0.24);
     backFace.current.style.setProperty('--in', b.toFixed(3));
     // show exactly one face: iOS Safari doesn't always honour backface-visibility for the card's canvas, which let
@@ -114,11 +125,7 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
   const measure = () => {
     const els = engine.els;
     if (!els.art || !els.sheet) return false;
-    const sw = els.sheet.offsetWidth, sh = els.sheet.offsetHeight;
-    const x = els.art.offsetLeft, y = els.art.offsetTop;
-    s.current.from = { x, y, w: cardW, h: cardH };
-    // desktop: the card widens across the window at its own height; phone: it fills the window, 10px in
-    s.current.to = row ? { x, y, w: sw - 2 * x, h: cardH } : { x: 10, y: 10, w: sw - 20, h: sh - 20 };
+    s.current.from = { x: els.art.offsetLeft, y: els.art.offsetTop, w: cardW, h: cardH };
     return true;
   };
 
