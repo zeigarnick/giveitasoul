@@ -4,16 +4,22 @@
 .credit {
   --in: 733ms; --out: 440ms;
   --spring: linear(0, 0.0302, 0.1001, 0.1926, 0.2952, 0.3992, 0.4987, 0.5901, 0.6715, 0.742, 0.8018, 0.8514, 0.8918, 0.924, 0.9491, 0.9682, 0.9825, 0.9928, 1, 1.0047, 1.0075, 1.009, 1.0096, 1.0094, 1.0088, 1.008, 1.007, 1.006, 1.005, 1.0042, 1.0033, 1.0026, 1.002, 1.0015, 1.0011, 1.0008, 1.0005, 1.0003, 1.0002, 1.0001, 1, 1, 0.9999, 0.9999, 1);
-  display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border: 1px solid rgba(20,18,16,0.03); border-radius: 99px; background: rgba(20,18,16,0.01); color: #141210; text-decoration: none; white-space: nowrap;
+  position: relative; isolation: isolate;
+  display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; color: #141210; text-decoration: none; white-space: nowrap;
+}
+/* the pill itself is a layer behind the text: it grows on hover while the text stays put, since scaling the text
+   would draw it off the pixel grid and soften it */
+.credit::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border: 1px solid rgba(20,18,16,0.03); border-radius: 99px; background: rgba(20,18,16,0.01);
   transition: transform var(--out) var(--spring), background-color var(--out) var(--spring), border-color var(--out) var(--spring);
 }
 /* (pages lighten links on hover; the credit keeps its ink) */
-.credit:hover { color: #141210; border-color: rgba(20,18,16,0.06); background: rgba(20,18,16,0.02); transform: scale(1.02); transition: transform var(--in) var(--spring), background-color var(--in) var(--spring), border-color var(--in) var(--spring); }
-.credit:active { transform: scale(1.0088); transition-duration: 90ms; }
+.credit:hover { color: #141210; }
+.credit:hover::before { border-color: rgba(20,18,16,0.06); background: rgba(20,18,16,0.02); transform: scale(1.02); transition: transform var(--in) var(--spring), background-color var(--in) var(--spring), border-color var(--in) var(--spring); }
+.credit:active::before { transform: scale(1.0088); transition-duration: 90ms; }
 .credit:focus-visible { outline: 2px solid #D22E1E; outline-offset: 2px; }
 .credit-by { font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #6B6358; }
-.credit-name { font-family: var(--serif); font-weight: var(--serif-w); font-variation-settings: var(--serif-axes); font-size: 19px; line-height: 1; letter-spacing: -0.02em; transition: transform var(--out) var(--spring); }
-.credit:hover .credit-name { transform: translateX(0.5px); transition: transform var(--in) var(--spring) 15ms; }
+.credit-name { font-family: var(--serif); font-weight: var(--serif-w); font-variation-settings: var(--serif-axes); font-size: 19px; line-height: 1; letter-spacing: -0.02em; }
 .credit-x { color: #141210; opacity: 0.55; transition: opacity var(--out) var(--spring); }
 .credit:hover .credit-x { opacity: 1; transition: opacity var(--in) var(--spring) 30ms; }
 /* landing: "created by" slides up and out as the handle slides up in (.credit-by holds .cb-a and .cb-b) */
@@ -23,13 +29,13 @@
 .credit:hover .cb-a { transform: translateY(-100%); opacity: 0; transition: transform var(--in) var(--spring), opacity var(--in) var(--spring); }
 .credit:hover .cb-b { transform: none; opacity: 1; transition: transform var(--in) var(--spring) 30ms, opacity var(--in) var(--spring) 30ms; }
 @media (prefers-reduced-motion: reduce) {
-  .credit, .credit-x, .credit-name, .cb-a, .cb-b { transition-duration: 1ms !important; }
-  .credit:hover, .credit:active { transform: none; }
+  .credit::before, .credit-x, .cb-a, .cb-b { transition-duration: 1ms !important; }
+  .credit:hover::before, .credit:active::before { transform: none; }
 }
 .credit-handle { font-family: 'Geist Mono', monospace; font-size: 12px; color: #6B6358; }
 /* phone landing: plain text under the logo */
-.credit-byline { height: auto; padding: 0; gap: 5px; border: 0; background: none; }
-.credit-byline:hover, .credit-byline:active { background: none; transform: none; }
+.credit-byline { height: auto; padding: 0; gap: 5px; }
+.credit-byline::before { display: none; }
 .credit-byline .credit-by { font-size: 10px; }
 .credit-byline .credit-name { font-size: 15px; }
 .credit-byline .credit-x { width: 10px; height: 10px; }

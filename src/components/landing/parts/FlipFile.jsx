@@ -80,12 +80,14 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
       visibility: on ? 'inherit' : 'hidden',
       left: lerp(f.x, t.x, g) + 'px', top: lerp(f.y, t.y, g) + 'px', width: w + 'px', height: h + 'px'
     });
-    // at rest (fully over, or home) the flip drops its 3D transforms: a face left in a 3D context, even one turned
-    // a whole 180° back to flat, is drawn as a resampled bitmap and its text goes soft
-    const flat = p === 0 || p === 1;
+    // the turn finishes just inside each end of the spring, so its slow settling tail (and any overshoot) is spent
+    // flat: the flip drops its 3D transforms there, since a face left in a 3D context, even one turned a whole 180°
+    // back to flat, is drawn as a resampled bitmap and its text goes soft
+    const turn = clamp01((p - 0.02) / 0.94);
+    const flat = turn === 0 || turn === 1;
     panel.current.classList.toggle('is-flat', flat);
-    rotor.current.style.transform = flat ? 'none' : `rotateY(${(180 * p).toFixed(2)}deg)`;
-    backFace.current.style.transform = p === 1 ? 'none' : '';
+    rotor.current.style.transform = flat ? 'none' : `rotateY(${(180 * turn).toFixed(2)}deg)`;
+    backFace.current.style.transform = turn === 1 ? 'none' : '';
     front.current.style.left = (row ? 0 : (w - cardW) / 2) + 'px';
     // the back's content is laid out once at the final size and only revealed as the card grows, so its text never
     // re-wraps mid-flip; it fades in once the card is nearly full size
@@ -94,7 +96,7 @@ export function FlipFile({ engine, soul, L, flipped, onBack }) {
     backFace.current.style.setProperty('--in', b.toFixed(3));
     // show exactly one face: iOS Safari doesn't always honour backface-visibility for the card's canvas, which let
     // the front card flicker through the back mid-turn
-    const backShows = Math.abs(((180 * p) % 360 + 360) % 360 - 180) < 90;
+    const backShows = turn > 0.5;
     backFace.current.style.visibility = backShows ? 'inherit' : 'hidden';
     frontFace.current.style.visibility = backShows ? 'hidden' : 'inherit';
     runFront(on && !backShows);
